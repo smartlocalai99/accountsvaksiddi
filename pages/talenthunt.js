@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { withAuthPage } from "@/lib/withAuthPage";
+
+export const getServerSideProps = withAuthPage({ path: "/talenthunt" });
 
 function formatDate(value) {
   if (!value) return "-";
@@ -143,7 +146,7 @@ export default function TalentHuntPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function fetchTalentHuntData() {
+  const fetchTalentHuntData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -176,10 +179,6 @@ export default function TalentHuntPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    fetchTalentHuntData();
   }, [
     search,
     classNumber,
@@ -190,6 +189,12 @@ export default function TalentHuntPage() {
     sortBy,
     sortOrder,
   ]);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    void fetchTalentHuntData();
+  }, [fetchTalentHuntData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleClassChange(value) {
     setClassNumber(value);
@@ -494,11 +499,11 @@ export default function TalentHuntPage() {
                         {item.source_sheet_row || "-"}
                       </td>
 
-                      <td className="min-w-[180px] px-4 py-4 text-sm font-semibold text-slate-900">
+                      <td className="min-w-45 px-4 py-4 text-sm font-semibold text-slate-900">
                         {item.parent_name || "-"}
                       </td>
 
-                      <td className="min-w-[180px] px-4 py-4 text-sm font-semibold text-slate-900">
+                      <td className="min-w-45 px-4 py-4 text-sm font-semibold text-slate-900">
                         {item.child_name || "-"}
                       </td>
 
@@ -510,7 +515,7 @@ export default function TalentHuntPage() {
                         {item.mobile_number || "-"}
                       </td>
 
-                      <td className="min-w-[150px] px-4 py-4">
+                      <td className="min-w-37.5 px-4 py-4">
                         <TestBadge status={item.test_status} />
                       </td>
 
@@ -518,7 +523,7 @@ export default function TalentHuntPage() {
   {item.test_marks ?? "-"}
 </td>
 
-                      <td className="min-w-[210px] px-4 py-4">
+                      <td className="min-w-52.5 px-4 py-4">
                         <AdmissionBadge status={item.admission_status} />
                       </td>
                     </tr>

@@ -1,21 +1,28 @@
 
 
 import {
-  FaWpforms,
+  FaTachometerAlt,
+  FaClipboardList,
   FaUserGraduate,
   FaChalkboardTeacher,
   FaUserCircle,
   FaStar,
-  FaBullhorn,
-  FaUsers
+  FaUsers,
+  FaUsersCog,
+  FaFileInvoiceDollar,
+  FaBoxes,
+  FaChartBar
 } from "react-icons/fa";
 
 export const sidebarIcons = {
-  "Admission Form": FaWpforms,
+  Dashboard: FaTachometerAlt,
+  Admissions: FaClipboardList,
   Parents: FaUsers,
   Students: FaUserGraduate,
-  Teachers: FaChalkboardTeacher,
+  Staff: FaChalkboardTeacher,
+  Fees: FaFileInvoiceDollar,
+  Assets: FaBoxes,
+  Reports: FaChartBar,
+  "User Management": FaUsersCog,
   Account: FaUserCircle,
-  "Talent Hunt": FaStar,
-  Notice: FaBullhorn,
 };
