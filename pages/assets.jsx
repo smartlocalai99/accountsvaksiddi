@@ -368,12 +368,12 @@ export default function AssetsPage() {
 
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-slate-50">
+              <thead style={{ backgroundColor: "#8B1F1F" }}>
                 <tr>
                   {["Asset", "Category", "Qty", "Value", "Vendor", "Location", "Purchase Date", "Actions"].map((h) => (
                     <th
                       key={h}
-                      className={`px-5 py-4 text-xs font-bold uppercase tracking-wide text-slate-500 ${
+                      className={`px-5 py-4 text-xs font-bold uppercase tracking-wide text-white ${
                         h === "Actions" ? "text-right" : "text-left"
                       }`}
                     >

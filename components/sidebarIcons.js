@@ -11,7 +11,8 @@ import {
   FaUsersCog,
   FaFileInvoiceDollar,
   FaBoxes,
-  FaChartBar
+  FaChartBar,
+  FaMoneyBillWave
 } from "react-icons/fa";
 
 export const sidebarIcons = {
@@ -20,6 +21,7 @@ export const sidebarIcons = {
   Parents: FaUsers,
   Students: FaUserGraduate,
   Staff: FaChalkboardTeacher,
+  Payroll: FaMoneyBillWave,
   Fees: FaFileInvoiceDollar,
   Assets: FaBoxes,
   Reports: FaChartBar,

@@ -12,6 +12,7 @@ const sidebarLinks = [
   { label: "Parents", href: "/parents" },
   { label: "Students", href: "/students" },
   { label: "Staff", href: "/staff" },
+  { label: "Payroll", href: "/payroll" },
   { label: "Fees", href: "/fees" },
   { label: "Assets", href: "/assets" },
   { label: "Reports", href: "/reports" },

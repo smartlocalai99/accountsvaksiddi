@@ -30,11 +30,11 @@ function SortIcon({ column, sortBy, sortOrder }) {
 
 function SortHeader({ label, column, sortBy, sortOrder, onSort }) {
   return (
-    <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase text-slate-500">
+    <th className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase text-white" style={{ backgroundColor: "#8B1F1F" }}>
       <button
         type="button"
         onClick={() => onSort(column)}
-        className="flex items-center gap-1 hover:text-slate-900"
+        className="flex items-center gap-1 hover:text-slate-100"
       >
         {label}
         <SortIcon column={column} sortBy={sortBy} sortOrder={sortOrder} />
@@ -424,7 +424,7 @@ export default function TalentHuntPage() {
           {!loading && !error && records.length > 0 && (
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse text-left">
-                <thead className="bg-slate-50">
+                <thead style={{ backgroundColor: "#8B1F1F" }}>
                   <tr>
                     <SortHeader
                       label="ID"
