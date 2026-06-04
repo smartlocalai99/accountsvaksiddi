@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaReceipt, FaPlus, FaRupeeSign, FaTags, FaCalendarAlt } from "react-icons/fa";
+import PaginationControls from "@/components/PaginationControls";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/expenses" });
@@ -26,10 +27,18 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [expensePage, setExpensePage] = useState(1);
 
   const totalExpense = useMemo(
     () => expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     [expenses]
+  );
+
+  const expensePageSize = 6;
+  const expenseTotalPages = Math.max(1, Math.ceil(expenses.length / expensePageSize));
+  const paginatedExpenses = useMemo(
+    () => expenses.slice((expensePage - 1) * expensePageSize, expensePage * expensePageSize),
+    [expenses, expensePage]
   );
 
   async function fetchExpenses() {
@@ -55,6 +64,12 @@ export default function ExpensesPage() {
   useEffect(() => {
     fetchExpenses();
   }, []);
+
+  useEffect(() => {
+    if (expensePage > expenseTotalPages) {
+      setExpensePage(1);
+    }
+  }, [expensePage, expenseTotalPages]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -134,7 +149,7 @@ export default function ExpensesPage() {
         <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <form onSubmit={addExpense} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <span className="rounded-2xl bg-[#8B1F1F]/10 p-3 text-[#8B1F1F]"><FaPlus /></span>
+              <span className="rounded-2xl bg-[#08516d]/10 p-3 text-[#08516d]"><FaPlus /></span>
               <div>
                 <h2 className="text-xl font-black text-slate-900">New expense</h2>
                 <p className="text-sm text-slate-500">Capture a fresh expense in seconds.</p>
@@ -165,7 +180,7 @@ export default function ExpensesPage() {
               </Field>
             </div>
 
-            <button type="submit" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#8B1F1F] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#6f1818] disabled:cursor-not-allowed disabled:opacity-70" disabled={loading}>
+            <button type="submit" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70" disabled={loading}>
               <FaPlus /> {loading ? "Saving..." : "Save expense"}
             </button>
           </form>
@@ -186,7 +201,7 @@ export default function ExpensesPage() {
                       <p className="font-bold text-slate-900">{item.title}</p>
                       <p className="mt-1 text-sm text-slate-500">{item.category} • {item.date}</p>
                     </div>
-                    <p className="text-lg font-black text-slate-900">{formatCurrency(item.amount)}</p>
+                    <p className="text-lg font-black text-red-700">{formatCurrency(item.amount)}</p>
                   </div>
                   {item.notes ? <p className="mt-3 text-sm leading-6 text-slate-600">{item.notes}</p> : null}
                   <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -207,6 +222,15 @@ export default function ExpensesPage() {
                 </div>
               )}
             </div>
+
+            <PaginationControls
+              currentPage={expensePage}
+              totalPages={expenseTotalPages}
+              totalItems={expenses.length}
+              pageSize={expensePageSize}
+              label="expenses"
+              onPageChange={setExpensePage}
+            />
           </div>
         </section>
       </div>
@@ -222,7 +246,7 @@ function StatCard({ icon: Icon, label, value }) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{label}</p>
           <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>
         </div>
-        <span className="rounded-2xl bg-white p-3 text-[#8B1F1F] shadow-sm">
+        <span className="rounded-2xl bg-white p-3 text-[#08516d] shadow-sm">
           <Icon />
         </span>
       </div>

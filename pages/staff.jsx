@@ -540,7 +540,7 @@ export default function StaffPage() {
 
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead style={{ backgroundColor: "#8B1F1F" }}>
+              <thead className="bg-primary">
                 <tr>
                   {["Staff", "Type", "Designation", "Subject", "Mobile", "Salary", "Status", "Actions"].map((h) => (
                     <th key={h} className={`px-5 py-4 text-xs font-bold uppercase tracking-wide text-white ${h === "Actions" ? "text-right" : "text-left"}`}>{h}</th>

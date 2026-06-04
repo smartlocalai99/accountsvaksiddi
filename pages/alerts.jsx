@@ -44,7 +44,7 @@ export default function AlertsPage() {
               </p>
             </div>
 
-            <div className="rounded-3xl bg-[#8B1F1F]/10 px-5 py-4 text-[#8B1F1F]">
+            <div className="rounded-3xl bg-primary-10 px-5 py-4 text-primary">
               <div className="flex items-center gap-3">
                 <FaBell className="text-xl" />
                 <div>

@@ -369,7 +369,7 @@ export default function UserManagementPage() {
 
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead style={{ backgroundColor: "#8B1F1F" }}>
+              <thead style={{ backgroundColor: "#08516d" }}>
                 <tr>
                   <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-white">
                     ID

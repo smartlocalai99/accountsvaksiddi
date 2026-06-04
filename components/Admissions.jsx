@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AdmissionModal from "./AdmissionModal";
 
 const BADGE_STYLES = {
   NEW: "bg-amber-50 text-amber-700 ring-amber-200",
@@ -46,6 +47,7 @@ export default function Admissions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedAdmissionId, setSelectedAdmissionId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -122,6 +124,7 @@ export default function Admissions() {
 
   return (
     <div >
+      <AdmissionModal admissionId={selectedAdmissionId} onClose={() => setSelectedAdmissionId(null)} />
       <div className="rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-6 md:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -176,7 +179,7 @@ export default function Admissions() {
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-[0.2em] bg-[#8B1F1F] text-white">
+                  <tr className="text-left text-xs uppercase tracking-[0.2em] bg-primary text-white">
                     <th className="border-b border-slate-200 px-4 py-3">Student</th>
                     <th className="border-b border-slate-200 px-4 py-3">Class</th>
                     <th className="border-b border-slate-200 px-4 py-3">Program</th>
@@ -188,7 +191,7 @@ export default function Admissions() {
                 </thead>
                 <tbody>
                   {filteredAdmissions.map((admission) => (
-                    <tr key={admission.id} className="align-top hover:bg-slate-50/80">
+                    <tr key={admission.id} onClick={() => setSelectedAdmissionId(admission.id)} className="align-top hover:bg-slate-50/80 cursor-pointer">
                       <td className="border-b border-slate-100 px-4 py-4">
                         <div className="font-semibold text-slate-900">{admission.student_name || "Unnamed applicant"}</div>
                         <div className="mt-1 text-sm text-slate-500">

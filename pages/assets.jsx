@@ -380,7 +380,7 @@ export default function AssetsPage() {
 
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead style={{ backgroundColor: "#8B1F1F" }}>
+              <thead className="bg-primary">
                 <tr>
                   {["Asset", "Category", "Qty", "Value", "Vendor", "Location", "Purchase Date", "Actions"].map((h) => (
                     <th

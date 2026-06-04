@@ -931,7 +931,7 @@ function ReceiptPreviewModal({
                 type="button"
                 onClick={onSaveAndPrint}
                 disabled={loading}
-                className="rounded-lg bg-[#711d18] px-5 py-2 text-sm font-semibold text-white hover:bg-[#5f1713] disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Saving..." : "Submit & Print"}
               </button>
@@ -1158,7 +1158,7 @@ function ReceiptRow({ label, value }) {
 function Section({ title, children }) {
   return (
     <div className="mb-6">
-      <h2 className="mb-4 rounded-t-lg border-b bg-[#711d18] px-4 py-3 text-center text-lg font-semibold text-white">
+      <h2 className="mb-4 rounded-t-lg border-b bg-primary px-4 py-3 text-center text-lg font-semibold text-white">
         {title}
       </h2>
 

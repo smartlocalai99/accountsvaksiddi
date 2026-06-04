@@ -5,7 +5,7 @@ export default function StudentsTable({ students }) {
     <div className="overflow-x-auto w-full">
       <table className="min-w-full bg-white border border-gray-200 rounded-lg text-xs md:text-sm">
         <thead>
-          <tr className="bg-[#8B1F1F] text-white">
+          <tr className="bg-primary text-white">
             <th className="py-2 px-4 text-center">ID</th>
             <th className="py-2 px-4 text-center">Full Name</th>
             <th className="py-2 px-4 text-center">Gender</th>

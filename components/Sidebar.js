@@ -34,7 +34,7 @@ const accountantSidebarLinks = [
   { label: "Reports", href: "/reports" },
 ];
 
-// Maroon-red from logo: #8B1F1F
+// Primary brand color (updated): #08516d
 export default function Sidebar({ user }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -48,7 +48,7 @@ export default function Sidebar({ user }) {
     <>
       {/* Mobile Toggle Button at top left */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden bg-[#8B1F1F] text-white p-3 rounded-full shadow-lg focus:outline-none"
+        className="fixed top-4 left-4 z-50 md:hidden bg-primary text-white p-3 rounded-full shadow-lg focus:outline-none"
         onClick={() => setOpen((v) => !v)}
         aria-label="Toggle sidebar"
       >
@@ -66,10 +66,10 @@ export default function Sidebar({ user }) {
       >
         <div className="flex flex-col items-center mb-10">
           <Image
-            src="/logo.jpeg"
+            src="/s.jpg"
             alt="Logo"
-            width={180}
-            height={180}
+            width={80}
+            height={80}
             priority
           />
         </div>
@@ -82,14 +82,11 @@ export default function Sidebar({ user }) {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className={`flex items-center px-4 py-3 rounded-lg font-medium transition-colors group
-                      hover:bg-[#8B1F1F]/10 hover:text-[#8B1F1F]
-                      ${isActive ? "bg-[#8B1F1F]/10 text-[#8B1F1F] font-bold" : "text-black"}
-                    `}
+                    className={`flex items-center px-4 py-3 rounded-lg font-medium transition-colors group ${isActive ? "bg-primary-10 text-primary font-bold" : "text-black"}`}
                     onClick={() => setOpen(false)}
                   >
-                    {Icon && <Icon className={`text-2xl mr-4 ${isActive ? "text-[#8B1F1F]" : "group-hover:text-[#8B1F1F]"}`} />}
-                    <span className={`tracking-wide text-base ${isActive ? "text-[#8B1F1F]" : "group-hover:text-[#8B1F1F]"}`}>{link.label}</span>
+                    {Icon && <Icon className={`text-2xl mr-4 ${isActive ? "text-primary" : "group-hover:text-primary"}`} />}
+                    <span className={`tracking-wide text-base ${isActive ? "text-primary" : "group-hover:text-primary"}`}>{link.label}</span>
                   </Link>
                 </li>
               );

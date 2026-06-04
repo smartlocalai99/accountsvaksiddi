@@ -275,7 +275,7 @@ export default function DashboardPage({
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
                       <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
                     </div>
-                    <span className="rounded-2xl bg-[#8B1F1F]/10 p-3 text-[#8B1F1F] transition group-hover:bg-[#8B1F1F] group-hover:text-white">
+                    <span className="rounded-2xl bg-primary-10 p-3 text-primary transition group-hover:bg-primary-20 group-hover:text-white">
                       <Icon className="text-xl" />
                     </span>
                   </div>

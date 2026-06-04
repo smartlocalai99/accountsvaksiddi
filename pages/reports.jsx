@@ -429,8 +429,8 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-3xl bg-white shadow-lg">
-              <div className=" px-8 py-6" style={{ backgroundColor: "#8B1F1F" }}>
+              <div className="overflow-hidden rounded-3xl bg-white shadow-lg">
+              <div className=" px-8 py-6 bg-primary">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="p-2 bg-linear-to-br from-red-400 to-pink-500 rounded-xl">
                     <svg xmlns='http://www.w3.org/2000/svg' className='text-white w-5 h-5' fill='currentColor' viewBox='0 0 24 24'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/></svg>
@@ -440,9 +440,9 @@ export default function ReportsPage() {
                 <p className="text-sm text-red-100 ml-11">Students with outstanding balances.</p>
               </div>
 
-              <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
                 <table className="min-w-full">
-                  <thead style={{ backgroundColor: "#5C0A0A" }}>
+                  <thead style={{ backgroundColor: "#063d4f" }}>
                     <tr>
                       {["Student", "Class", "Parent", "Total", "Paid", "Balance"].map((h) => (
                         <th key={h} className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-white">

@@ -396,7 +396,7 @@ export default function PayrollPage() {
 
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead style={{ backgroundColor: "#8B1F1F" }}>
+              <thead className="bg-primary">
                 <tr>
                   {["Staff", "Month", "Salary", "Leaves", "Deductions", "Net Salary", "Status", "Mode", "Actions"].map((h) => (
                     <th key={h} className="px-5 py-4 text-left text-xs font-bold uppercase text-white">

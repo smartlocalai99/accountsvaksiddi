@@ -1,2 +1,54 @@
 @import "tailwindcss";
 
+:root {
+	/* Primary palette */
+	--color-primary: #08516d; /* main */
+	--color-primary-900: #042a35; /* darkest */
+	--color-primary-700: #063d4f; /* hover/darker */
+	--color-primary-100: #eaf6f8; /* light */
+
+	/* Accents */
+	--color-accent: #5f5ea1;
+	--color-success: #16a34a;
+	--color-warning: #f59e0b;
+	--color-danger: #ef4444;
+
+	/* Neutrals */
+	--color-bg: #ffffff;
+	--color-muted: #6b7280;
+}
+
+/* Simple utility classes to bridge inline hex usages */
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-primary-10 { background-color: color-mix(in srgb, var(--color-primary) 10%, transparent) !important; }
+.bg-primary-700 { background-color: var(--color-primary-700) !important; }
+.text-primary { color: var(--color-primary) !important; }
+.text-primary-700 { color: var(--color-primary-700) !important; }
+.border-primary { border-color: var(--color-primary) !important; }
+
+/* Hover helpers */
+.hover\:bg-primary:hover { background-color: var(--color-primary) !important; }
+.hover\:bg-primary-700:hover { background-color: var(--color-primary-700) !important; }
+
+/* group-hover helpers */
+.group:hover .group-hover\:text-primary { color: var(--color-primary) !important; }
+.group:hover .group-hover\:text-primary-700 { color: var(--color-primary-700) !important; }
+.group:hover .group-hover\:bg-primary-10 { background-color: color-mix(in srgb, var(--color-primary) 10%, transparent) !important; }
+
+.group:hover .group-hover\:bg-primary { background-color: var(--color-primary) !important; }
+.group:hover .group-hover\:bg-primary-700 { background-color: var(--color-primary-700) !important; }
+
+/* Slightly stronger mix for hover states (20%) */
+.bg-primary-20 { background-color: color-mix(in srgb, var(--color-primary) 20%, transparent) !important; }
+.group:hover .group-hover\:bg-primary-20 { background-color: color-mix(in srgb, var(--color-primary) 20%, transparent) !important; }
+
+@supports not (color: color-mix(in srgb, red 20%, transparent)) {
+	.bg-primary-20 { background-color: rgba(8,81,109,0.18) !important; }
+}
+
+/* Fallback for older browsers without color-mix: provide a semi-transparent primary */
+@supports not (color: color-mix(in srgb, red 10%, transparent)) {
+	.bg-primary-10 { background-color: rgba(8,81,109,0.1) !important; }
+}
+
+
