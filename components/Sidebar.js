@@ -29,6 +29,7 @@ const accountantSidebarLinks = [
   { label: "Cash / Bank", href: "/bank-cash" },
   { label: "Reconciliation", href: "/reconciliation" },
   { label: "Expenses", href: "/expenses" },
+  { label: "Assets", href: "/assets" },
   { label: "Payroll", href: "/payroll" },
   { label: "Alerts", href: "/alerts" },
   { label: "Reports", href: "/reports" },
