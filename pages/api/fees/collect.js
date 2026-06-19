@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { getWhatsAppConfig } from "@/lib/whatsapp";
 
 const pool =
   global.feeCollectPool ||
@@ -18,6 +19,14 @@ function cleanText(value) {
 
 function normalizePhone(value) {
   return String(value ?? "").replace(/\D/g, "");
+}
+
+function formatWhatsAppPhone(value) {
+  const digits = normalizePhone(value);
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+  return digits;
 }
 
 function formatAmount(value) {
@@ -210,15 +219,19 @@ async function insertFeePayment(
 }
 
 async function sendWhatsAppReceipt(body, receiptNo) {
-  const workerUrl = process.env.WHATSAPP_WORKER_URL;
-  const workerApiKey = process.env.WHATSAPP_WORKER_API_KEY;
+  const config = await getWhatsAppConfig();
+  const workerUrl = config.workerUrl;
+  const workerApiKey = config.workerApiKey;
 
   if (!workerUrl || !workerApiKey) {
-    throw new Error("WhatsApp worker env variables missing");
+    throw new Error("WhatsApp worker credentials not configured");
   }
 
   const amount = formatAmount(body.amount_paid);
-  const message = `Dear Parent, we have received the school fee payment of ₹${amount} for ${body.student_name}.
+  const parentName = cleanText(body.parent_name) || "Parent";
+  const message = `Dear ${parentName}, greetings from Vaksiddhi Public School (R), Manvi.
+
+We have received the school fee payment of ₹${amount} for ${body.student_name}.
 
 Class: ${body.class_name || "-"}
 Receipt No: ${receiptNo}
@@ -226,7 +239,9 @@ Payment Mode: ${body.payment_mode}
 Payment Date: ${body.payment_date}
 
 Thank you.
-- SmartBooks AI`;
+Vaksiddhi Public School (R), Manvi`;
+
+  const formattedPhone = formatWhatsAppPhone(body.parent_mobile);
 
   const response = await fetch(`${workerUrl}/api/messages/send-test`, {
     method: "POST",
@@ -235,7 +250,7 @@ Thank you.
       "x-api-key": workerApiKey,
     },
     body: JSON.stringify({
-      recipient_phone: body.parent_mobile,
+      recipient_phone: formattedPhone,
       message_text: message,
     }),
   });

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   FaUpload,
   FaFileExcel,
-  FaFilePdf,
   FaCheckCircle,
   FaTimesCircle,
   FaExclamationTriangle,
@@ -49,12 +48,6 @@ function formatMonth(monthKey) {
 }
 
 function getStatementFileIcon(fileName = "") {
-  const lowerName = fileName.toLowerCase();
-
-  if (lowerName.endsWith(".pdf")) {
-    return FaFilePdf;
-  }
-
   return FaFileExcel;
 }
 
@@ -264,11 +257,8 @@ export default function ReconciliationPage() {
       console.error("Bank statement scan failed:", error);
 
       setScanError(
-        "Demo mode: backend scan API is not connected yet. After connecting it, SmartBooks AI will read UTR/reference, amount, date, and narration from the uploaded Excel, CSV, or PDF bank statement and compare it with invoices/receipts."
+        error.message || "Unable to scan this bank statement. Please upload an Excel or CSV statement with date, narration/reference, and credit amount columns."
       );
-
-      setReconciliationRows(addRowIds(getDemoReconciliationRows()));
-      setViewFilter("Needs Review");
     } finally {
       setScanning(false);
     }
@@ -421,14 +411,13 @@ export default function ReconciliationPage() {
 
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
                   Select the statement month and bank account, upload Excel,
-                  CSV, or PDF bank statement, and review only the records that
+                  CSV bank statement, and review only the records that
                   need attention.
                 </p>
 
                 <p className="mt-2 max-w-3xl text-xs font-semibold leading-6 text-slate-500">
-                  Supported files: Excel, CSV, PDF. For best results, upload
-                  Excel or CSV. PDF should be text-based and not
-                  password-protected.
+                  Supported files: Excel and CSV with date, narration/reference,
+                  and credit amount columns.
                 </p>
               </div>
 
@@ -437,7 +426,7 @@ export default function ReconciliationPage() {
                 <span className="pointer-events-none">Upload Statement</span>
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.csv,.pdf"
+                  accept=".xlsx,.xls,.csv"
                   onChange={handleStatementUpload}
                   className="hidden"
                 />
@@ -795,86 +784,6 @@ export default function ReconciliationPage() {
   );
 }
 
-function getDemoReconciliationRows() {
-  return [
-    {
-      bankDate: "2026-05-22",
-      utr: "UTR1029384756",
-      narration: "UPI/Parent fee payment/Ramesh",
-      bankAmount: 4000,
-      invoiceNo: "INV-1024",
-      receiptNo: "RCPT-10021",
-      studentName: "Ramesh Kumar",
-      matchReason: "UTR and amount matched",
-      status: "Matched",
-    },
-    {
-      bankDate: "2026-05-22",
-      utr: "UTR1029384757",
-      narration: "UPI/School fee/Suresh",
-      bankAmount: 5000,
-      invoiceNo: "INV-1025",
-      receiptNo: "RCPT-10022",
-      studentName: "Suresh B",
-      matchReason: "UTR and amount matched",
-      status: "Matched",
-    },
-    {
-      bankDate: "2026-05-22",
-      utr: "UTR1029384758",
-      narration: "UPI/Unknown credit",
-      bankAmount: 3000,
-      receiptNo: "",
-      studentName: "",
-      matchReason: "No invoice or receipt found",
-      status: "Unmatched",
-    },
-    {
-      bankDate: "2026-05-21",
-      utr: "UTR1029384759",
-      narration: "IMPS/Parent transfer",
-      bankAmount: 8000,
-      invoiceNo: "INV-1018",
-      receiptNo: "Possible: RCPT-10018",
-      studentName: "Likely match - amount same, UTR missing",
-      matchReason: "Amount matched, UTR missing",
-      status: "Possible Match",
-    },
-    {
-      bankDate: "2026-05-20",
-      utr: "UTR1029384760",
-      narration: "NEFT/Unknown school fee transfer",
-      bankAmount: 6000,
-      receiptNo: "",
-      studentName: "",
-      matchReason: "No invoice or receipt found",
-      status: "Unmatched",
-    },
-    {
-      bankDate: "2026-05-19",
-      utr: "UTR1029384761",
-      narration: "Duplicate UPI credit / same payer",
-      bankAmount: 4000,
-      invoiceNo: "INV-1024",
-      receiptNo: "RCPT-10021",
-      studentName: "Ramesh Kumar",
-      matchReason: "Same invoice already matched once",
-      status: "Duplicate Bank Credit",
-    },
-    {
-      bankDate: "2026-05-18",
-      utr: "",
-      narration: "Receipt entered in SmartBooks but not visible in bank",
-      bankAmount: 7000,
-      invoiceNo: "INV-1030",
-      receiptNo: "RCPT-10030",
-      studentName: "Ananya R",
-      matchReason: "Receipt exists in SmartBooks, no bank credit found",
-      status: "Recorded Not Found",
-    },
-  ];
-}
-
 function EmptyReconciliationState() {
   return (
     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
@@ -887,9 +796,9 @@ function EmptyReconciliationState() {
       </h3>
 
       <p className="mx-auto mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-500">
-        Upload this month&apos;s Excel, CSV, or PDF bank statement to start
-        reconciliation. SmartBooks AI will extract UTR/reference number, amount,
-        date, and narration automatically.
+        Upload this month&apos;s Excel or CSV bank statement to start
+        reconciliation. The system will read UTR/reference number, amount, date,
+        and narration, then compare it with real fee receipts.
       </p>
     </div>
   );

@@ -4,14 +4,18 @@ import { withAuthPage } from "@/lib/withAuthPage";
 export const getServerSideProps = withAuthPage({ path: "/school-profile" });
 
 const initialForm = {
-  school_name: "",
+  school_name: "Vaksiddhi Public School (R), Manvi",
   school_code: "",
+  school_address: "Manvi, Raichur, Karnataka, India",
   established_year: "",
   academic_year: "",
   principal_name: "",
-  contact_number: "",
+  contact_number: "+91 9449484004",
   email: "",
-  school_logo: "",
+  school_logo: "/logos.png",
+  letterhead_logo: "/logos.png",
+  letterhead_school_name: "Vaksiddhi Public School (R), Manvi",
+  letterhead_address: "Manvi, Raichur, Karnataka, India",
   admission_number_prefix: "",
   account_name: "",
   bank_name: "",
@@ -22,10 +26,11 @@ const initialForm = {
   qr_code_image: "",
 };
 
-const DEFAULT_LOGO = "/logo.jpeg";
+const DEFAULT_LOGO = "/logos.png";
 
 export default function SchoolProfilePage() {
   const [form, setForm] = useState(initialForm);
+  const [feeRows, setFeeRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -37,16 +42,26 @@ export default function SchoolProfilePage() {
         setLoading(true);
         setError("");
 
-        const response = await fetch("/api/school-settings");
-        const data = await response.json();
+        const [settingsResponse, feesResponse] = await Promise.all([
+          fetch("/api/school-settings"),
+          fetch("/api/fee-structure"),
+        ]);
+        const data = await settingsResponse.json();
+        const feeData = await feesResponse.json();
 
-        if (!response.ok || !data.success) {
+        if (!settingsResponse.ok || !data.success) {
           throw new Error(data.message || "Failed to load school settings");
+        }
+
+        if (!feesResponse.ok || !feeData.success) {
+          throw new Error(feeData.error || "Failed to load fee structure");
         }
 
         if (data.data) {
           setForm((current) => ({ ...current, ...data.data }));
         }
+
+        setFeeRows(feeData.rows || []);
       } catch (loadError) {
         setError(loadError.message || "Failed to load school settings");
       } finally {
@@ -62,7 +77,15 @@ export default function SchoolProfilePage() {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
-  async function handleFileChange(event, fieldName) {
+  function handleFeeChange(index, fieldName, value) {
+    setFeeRows((current) =>
+      current.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [fieldName]: value } : row
+      )
+    );
+  }
+
+async function handleFileChange(event, fieldName) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -70,9 +93,32 @@ export default function SchoolProfilePage() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const result = typeof reader.result === "string" ? reader.result : "";
-      setForm((current) => ({ ...current, [fieldName]: result }));
+
+      try {
+        setError("");
+
+        const response = await fetch("/api/school-settings/upload-image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fieldName,
+            image: result,
+          }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to upload image");
+        }
+
+        setForm((current) => ({ ...current, [fieldName]: data.url }));
+      } catch (uploadError) {
+        setError(uploadError.message || "Failed to upload image");
+      }
     };
     reader.readAsDataURL(file);
   }
@@ -99,9 +145,24 @@ export default function SchoolProfilePage() {
         throw new Error(data.message || "Failed to save school settings");
       }
 
+      const feeResponse = await fetch("/api/fee-structure", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ rows: feeRows }),
+      });
+      const feeData = await feeResponse.json();
+
+      if (!feeResponse.ok || !feeData.success) {
+        throw new Error(feeData.error || "Failed to save fee structure");
+      }
+
       if (data.data) {
         setForm((current) => ({ ...current, ...data.data }));
       }
+
+      setFeeRows(feeData.rows || []);
 
       setMessage("School profile saved successfully.");
     } catch (saveError) {
@@ -112,6 +173,10 @@ export default function SchoolProfilePage() {
   }
 
   const logoPreview = useMemo(() => form.school_logo || DEFAULT_LOGO, [form.school_logo]);
+  const letterheadLogoPreview = useMemo(
+    () => form.letterhead_logo || form.school_logo || DEFAULT_LOGO,
+    [form.letterhead_logo, form.school_logo]
+  );
 
   if (loading) {
     return (
@@ -156,12 +221,85 @@ export default function SchoolProfilePage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Field label="School Name" name="school_name" value={form.school_name} onChange={handleChange} required />
             <Field label="School Code" name="school_code" value={form.school_code} onChange={handleChange} />
+            <Field label="School Address" name="school_address" value={form.school_address} onChange={handleChange} />
             <Field label="Established Year" name="established_year" value={form.established_year} onChange={handleChange} />
             <Field label="Academic Year" name="academic_year" value={form.academic_year} onChange={handleChange} />
             <Field label="Principal Name" name="principal_name" value={form.principal_name} onChange={handleChange} />
             <Field label="Contact Number" name="contact_number" value={form.contact_number} onChange={handleChange} />
             <Field label="Email" name="email" value={form.email} onChange={handleChange} />
             <Field label="Admission Number Prefix" name="admission_number_prefix" value={form.admission_number_prefix} onChange={handleChange} />
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Receipt Letterhead</h2>
+            <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <span className="mb-2 block text-sm font-semibold text-slate-700">Letterhead Logo</span>
+                <div className="mb-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={letterheadLogoPreview}
+                    alt="Letterhead logo preview"
+                    className="h-32 w-full object-contain p-4"
+                  />
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => handleFileChange(event, "letterhead_logo")}
+                  className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
+                />
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="Letterhead School Name" name="letterhead_school_name" value={form.letterhead_school_name} onChange={handleChange} />
+                <Field label="Letterhead Address" name="letterhead_address" value={form.letterhead_address} onChange={handleChange} />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Fee Structure</h2>
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-100 text-left text-xs font-bold uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3">Class</th>
+                    <th className="px-4 py-3">School Fee</th>
+                    <th className="px-4 py-3">Hostel 1st Term</th>
+                    <th className="px-4 py-3">Hostel 2nd Term</th>
+                    <th className="px-4 py-3">Hostel Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {feeRows.map((row, index) => {
+                    const hostelTotal =
+                      Number(row.hostel_first_term_fee || 0) +
+                      Number(row.hostel_second_term_fee || 0);
+
+                    return (
+                      <tr key={row.id || row.class_name}>
+                        <td className="px-4 py-3 font-semibold text-slate-900">
+                          {row.class_name}
+                        </td>
+                        <td className="px-4 py-3">
+                          <NumberField value={row.school_fee} onChange={(value) => handleFeeChange(index, "school_fee", value)} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <NumberField value={row.hostel_first_term_fee} onChange={(value) => handleFeeChange(index, "hostel_first_term_fee", value)} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <NumberField value={row.hostel_second_term_fee} onChange={(value) => handleFeeChange(index, "hostel_second_term_fee", value)} />
+                        </td>
+                        <td className="px-4 py-3 font-bold text-slate-900">
+                          ₹{hostelTotal.toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -253,5 +391,17 @@ function Field({ label, placeholder, ...props }) {
         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
       />
     </label>
+  );
+}
+
+function NumberField({ value, onChange }) {
+  return (
+    <input
+      type="number"
+      min="0"
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value)}
+      className="w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-900"
+    />
   );
 }

@@ -12,7 +12,6 @@ const emptyForm = {
   purchase_cost: "",
   vendor_name: "",
   invoice_number: "",
-  invoice_file_url: "",
   brand: "",
   model_number: "",
   serial_number: "",
@@ -192,7 +191,6 @@ function AssetModal({
               {input("purchase_cost", "Total Asset Value", "number")}
               {input("vendor_name", "Vendor Name")}
               {input("invoice_number", "Invoice Number")}
-              {input("invoice_file_url", "Invoice File URL")}
               {input("warranty_expiry_date", "Warranty Expiry Date", "date")}
             </div>
 
@@ -227,19 +225,6 @@ function AssetModal({
             />
           </section>
 
-          {isView && form.invoice_file_url && (
-            <section className="rounded-2xl bg-slate-50 p-4">
-              <h3 className="font-bold text-slate-900">Invoice File</h3>
-              <a
-                href={form.invoice_file_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white"
-              >
-                Open Invoice
-              </a>
-            </section>
-          )}
         </div>
 
         {!isView && (
@@ -274,6 +259,7 @@ function QuantityAdjustModal({ open, asset, onClose, onSubmit, submitting }) {
     notes: "",
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       setForm({
@@ -284,6 +270,7 @@ function QuantityAdjustModal({ open, asset, onClose, onSubmit, submitting }) {
       });
     }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!open || !asset) return null;
 
@@ -491,6 +478,7 @@ function MaintenanceModal({ open, asset, onClose, onSubmit, submitting }) {
     notes: "",
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       setForm({
@@ -503,6 +491,7 @@ function MaintenanceModal({ open, asset, onClose, onSubmit, submitting }) {
       });
     }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!open || !asset) return null;
 
@@ -1091,7 +1080,7 @@ export default function AssetsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-[900px]">
+            <table className="w-full min-w-[1100px]">
               <thead className="bg-primary">
                 <tr>
                   {[

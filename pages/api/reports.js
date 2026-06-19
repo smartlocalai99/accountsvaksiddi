@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { getDummyReportsData } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -58,7 +57,7 @@ export default async function handler(req, res) {
       SELECT
         COALESCE((SELECT COUNT(*) FROM public.students), 0)::int AS total_students,
         COALESCE((SELECT COUNT(*) FROM public.admissions), 0)::int AS total_admissions,
-        COALESCE((SELECT SUM(fees) FROM public.admissions WHERE fees IS NOT NULL), 0)::numeric AS total_fees,
+        COALESCE((SELECT SUM(COALESCE(final_fee, fees, 0)) FROM public.admissions), 0)::numeric AS total_fees,
         COALESCE((SELECT SUM(amount_paid) FROM public.fee_payments), 0)::numeric AS total_collected,
         COALESCE((SELECT SUM(amount_paid) FROM public.fee_payments WHERE payment_date = CURRENT_DATE), 0)::numeric AS today_collection,
         COALESCE((SELECT COUNT(*) FROM public.admissions WHERE DATE(created_at) >= CURRENT_DATE - INTERVAL '30 days'), 0)::int AS new_admissions_this_month,
@@ -124,9 +123,9 @@ export default async function handler(req, res) {
       SELECT
         a.class_applying_for AS class,
         COALESCE(COUNT(a.id), 0)::int AS students,
-        COALESCE(SUM(a.fees), 0)::numeric AS total_demand,
+        COALESCE(SUM(COALESCE(a.final_fee, a.fees, 0)), 0)::numeric AS total_demand,
         COALESCE(SUM(fp.amount_paid), 0)::numeric AS collected,
-        (COALESCE(SUM(a.fees), 0) - COALESCE(SUM(fp.amount_paid), 0))::numeric AS pending
+        (COALESCE(SUM(COALESCE(a.final_fee, a.fees, 0)), 0) - COALESCE(SUM(fp.amount_paid), 0))::numeric AS pending
       FROM public.admissions a
       LEFT JOIN public.fee_payments fp ON fp.admission_id = a.id
       WHERE a.class_applying_for IS NOT NULL
@@ -142,15 +141,15 @@ export default async function handler(req, res) {
         a.class_applying_for AS class,
         a.father_name,
         a.father_mobile AS parent_mobile,
-        COALESCE(a.fees, 0)::numeric AS total_fee,
+        COALESCE(a.final_fee, a.fees, 0)::numeric AS total_fee,
         COALESCE(SUM(fp.amount_paid), 0)::numeric AS paid_amount,
-        (COALESCE(a.fees, 0) - COALESCE(SUM(fp.amount_paid), 0))::numeric AS balance_amount,
+        (COALESCE(a.final_fee, a.fees, 0) - COALESCE(SUM(fp.amount_paid), 0))::numeric AS balance_amount,
         CEIL(EXTRACT(DAY FROM CURRENT_DATE - a.created_at))::int AS due_days
       FROM public.admissions a
       LEFT JOIN public.fee_payments fp ON fp.admission_id = a.id
-      WHERE a.fees IS NOT NULL
+      WHERE COALESCE(a.final_fee, a.fees) IS NOT NULL
       GROUP BY a.id
-      HAVING (COALESCE(a.fees, 0) - COALESCE(SUM(fp.amount_paid), 0)) > 0
+      HAVING (COALESCE(a.final_fee, a.fees, 0) - COALESCE(SUM(fp.amount_paid), 0)) > 0
       ORDER BY balance_amount DESC
       LIMIT 50
     `);
@@ -166,7 +165,7 @@ export default async function handler(req, res) {
         a.created_at AS admission_date,
         CASE 
           WHEN COALESCE(SUM(fp.amount_paid), 0) = 0 THEN 'Pending'
-          WHEN COALESCE(SUM(fp.amount_paid), 0) < a.fees THEN 'Partial'
+          WHEN COALESCE(SUM(fp.amount_paid), 0) < COALESCE(a.final_fee, a.fees, 0) THEN 'Partial'
           ELSE 'Paid'
         END AS fee_status
       FROM public.admissions a
@@ -241,12 +240,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Reports API Error:", err);
-    // Return dummy data for demo/development when database is unavailable
-    const dummyData = getDummyReportsData();
-    return res.status(200).json({
-      success: true,
-      isDemo: true,
-      data: dummyData,
-    });
+    return res.status(500).json({ success: false, error: err.message });
   }
 }

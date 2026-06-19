@@ -80,8 +80,8 @@ export default function AdmissionModal({ admissionId, onClose }) {
                     <p className="mt-3 text-xs text-slate-500">Class</p>
                     <p className="font-medium">{admission.class_applying_for || admission.class || "-"}</p>
 
-                    <p className="mt-3 text-xs text-slate-500">Program</p>
-                    <p className="font-medium">{admission.program || "-"}</p>
+                    <p className="mt-3 text-xs text-slate-500">Student Type</p>
+                    <p className="font-medium">{admission.student_type || "Day Scholar"}</p>
 
                     <p className="mt-3 text-xs text-slate-500">DOB</p>
                     <p className="font-medium">{admission.date_of_birth ? formatDate(admission.date_of_birth) : "-"}</p>

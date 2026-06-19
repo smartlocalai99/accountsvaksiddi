@@ -15,7 +15,7 @@ payroll_month: new Date().toLocaleString("en-US", {
   basic_salary: 0,
   increment_amount: 0,
   bonus_amount: 0,
-  deduction_amount: 2500,
+  deduction_amount: 0,
   payment_status: "PENDING",
   payment_date: "",
   payment_mode: "Bank Transfer",
@@ -350,10 +350,10 @@ export default function PayrollPage() {
 
         {message && <div className="mb-4 rounded-2xl bg-white p-4 text-sm font-bold shadow-sm">{message}</div>}
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Total Payout</p>
-            <h2 className="mt-3 text-3xl font-black">₹30,500</h2>
+            <h2 className="mt-3 text-3xl font-black">{money(metrics.totalPayroll)}</h2>
           </div>
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Paid</p>
@@ -362,10 +362,6 @@ export default function PayrollPage() {
           <div className="rounded-3xl bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Pending</p>
             <h2 className="mt-3 text-3xl font-black text-red-700">{money(metrics.pendingPayroll)}</h2>
-          </div>
-          <div className="rounded-3xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">Deductions</p>
-            <h2 className="mt-3 text-3xl font-black text-orange-600">₹2,500</h2>
           </div>
         </div>
 

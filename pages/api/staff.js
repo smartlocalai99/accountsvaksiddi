@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyPayroll } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -233,36 +232,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Staff API Error:", err);
-
-    // Return dummy data for demo/development when database is unavailable
-    if (req.method === "GET") {
-      const dummyStaff = dummyPayroll.map((p, idx) => ({
-        id: p.id,
-        staff_code: `STF${String(p.id).padStart(4, '0')}`,
-        full_name: p.staff_name,
-        gender: "Male",
-        mobile: `9876543${String(idx).padStart(3, '0')}`,
-        email: `${p.staff_name.toLowerCase().replace(/\s+/g, '.')}@school.edu`,
-        staff_type: "Teaching",
-        designation: p.position,
-        department: "Education",
-        subject: "Various",
-        classes_handling: "Multiple",
-        qualification: "B.Ed/M.Sc",
-        experience_years: 5,
-        joining_date: "2019-06-01",
-        employment_type: "Permanent",
-        salary_type: "Monthly",
-        monthly_salary: p.gross_salary,
-        work_status: "Active",
-      }));
-
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        staff: dummyStaff,
-      });
-    }
 
     return res.status(500).json({
       success: false,

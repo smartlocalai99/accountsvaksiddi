@@ -3,8 +3,74 @@ import { FaFileExcel } from "react-icons/fa";
 import PaginationControls from "@/components/PaginationControls";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
+import { query } from "@/lib/db";
 
-export const getServerSideProps = withAuthPage({ path: "/transactions" });
+export const getServerSideProps = withAuthPage({
+  path: "/transactions",
+  getProps: async () => {
+    try {
+      const res = await query(
+        `
+        SELECT 
+          payment_date::text AS date,
+          'Fee received' AS type,
+          'Fees' AS category,
+          payment_mode AS "paymentMode",
+          amount_paid::numeric AS amount,
+          receipt_no AS reference,
+          COALESCE(collected_by, 'Accountant') AS "createdBy",
+          COALESCE(notes, 'School fee collection') AS notes
+        FROM public.fee_payments
+
+        UNION ALL
+
+        SELECT 
+          date::text AS date,
+          'Expense paid' AS type,
+          category AS category,
+          'Bank Transfer' AS "paymentMode",
+          amount::numeric AS amount,
+          'EXP-' || id AS reference,
+          'Admin' AS "createdBy",
+          COALESCE(title || ' - ' || notes, title) AS notes
+        FROM public.expenses
+
+        UNION ALL
+
+        SELECT 
+          payment_date::text AS date,
+          'Payroll paid' AS type,
+          'Salary' AS category,
+          payment_mode AS "paymentMode",
+          net_salary::numeric AS amount,
+          'PAY-' || p.id AS reference,
+          'Admin' AS "createdBy",
+          COALESCE(remarks, 'Staff salary payout') AS notes
+        FROM public.payroll p
+        JOIN public.staff s ON p.staff_id = s.id
+        WHERE p.payment_status = 'PAID'
+
+        ORDER BY date DESC, reference DESC
+        `,
+        []
+      );
+
+      const transactions = res.rows.map((row) => ({
+        ...row,
+        amount: Number(row.amount || 0),
+      }));
+
+      return {
+        initialTransactions: transactions,
+      };
+    } catch (error) {
+      console.error("Failed to load transactions from database:", error);
+      return {
+        initialTransactions: [],
+      };
+    }
+  },
+});
 
 const columns = [
   "Date",
@@ -17,39 +83,6 @@ const columns = [
   "Notes",
 ];
 
-const sampleTransactions = [
-  {
-    date: "2026-05-22",
-    type: "Admission fee received",
-    category: "Admissions",
-    paymentMode: "Cash",
-    amount: 2000,
-    reference: "ADM-1024-501",
-    createdBy: "Admission Desk",
-    notes: "Initial admission payment recorded.",
-  },
-  {
-    date: "2026-05-22",
-    type: "Fee received",
-    category: "Fees",
-    paymentMode: "UPI",
-    amount: 5000,
-    reference: "FEE-2205-78",
-    createdBy: "Accountant",
-    notes: "Monthly fee collection.",
-  },
-  {
-    date: "2026-05-21",
-    type: "Expense paid",
-    category: "Office",
-    paymentMode: "Bank Transfer",
-    amount: 3200,
-    reference: "EXP-4451",
-    createdBy: "Admin",
-    notes: "Stationery and office supplies.",
-  },
-];
-
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -58,22 +91,29 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
-export default function TransactionsPage() {
+export default function TransactionsPage({ initialTransactions = [] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 2;
+  const pageSize = 10;
 
-  const totalPages = Math.max(1, Math.ceil(sampleTransactions.length / pageSize));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(initialTransactions.length / pageSize)
+  );
 
   const paginatedTransactions = useMemo(
-    () => sampleTransactions.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [currentPage]
+    () =>
+      initialTransactions.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+      ),
+    [currentPage, initialTransactions, pageSize]
   );
 
   function exportTransactions() {
     downloadExcel({
       fileName: "transaction-register.xlsx",
       sheetName: "Transactions",
-      rows: sampleTransactions.map((row) => ({
+      rows: initialTransactions.map((row) => ({
         Date: row.date,
         Type: row.type,
         Category: row.category,
@@ -112,7 +152,9 @@ export default function TransactionsPage() {
           <div className="border-b border-slate-200 px-6 py-5 md:px-8">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Transaction register</h2>
+                <h2 className="text-xl font-black text-slate-900">
+                  Transaction register
+                </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
                   All accountant money movement in a single stream.
@@ -122,7 +164,7 @@ export default function TransactionsPage() {
               <button
                 type="button"
                 onClick={exportTransactions}
-                className="inline-flex w-fit items-center gap-2 rounded-full  bg-green-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition hover:bg-primary-700"
+                className="inline-flex w-fit items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white shadow-sm transition hover:bg-primary-700"
               >
                 <FaFileExcel />
                 Download Excel
@@ -147,31 +189,60 @@ export default function TransactionsPage() {
 
               <tbody className="divide-y divide-slate-100">
                 {paginatedTransactions.map((row) => (
-                  <tr key={`${row.reference}-${row.type}`} className="hover:bg-slate-50">
-                    <td className="px-5 py-4 text-sm font-semibold text-slate-700">{row.date}</td>
-                    <td className="px-5 py-4 text-sm font-semibold text-slate-900">{row.type}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{row.category}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{row.paymentMode}</td>
+                  <tr
+                    key={`${row.reference}-${row.type}`}
+                    className="hover:bg-slate-50"
+                  >
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-700">
+                      {row.date}
+                    </td>
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-900">
+                      {row.type}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {row.category}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {row.paymentMode}
+                    </td>
                     <td className="px-5 py-4 text-sm font-bold text-emerald-700">
                       {formatCurrency(row.amount)}
                     </td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{row.reference}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{row.createdBy}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{row.notes}</td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {row.reference}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {row.createdBy}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {row.notes}
+                    </td>
                   </tr>
                 ))}
+                {initialTransactions.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={columns.length}
+                      className="px-5 py-8 text-center text-sm font-medium text-slate-500"
+                    >
+                      No transactions recorded yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
 
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={sampleTransactions.length}
-            pageSize={pageSize}
-            label="transactions"
-            onPageChange={setCurrentPage}
-          />
+          {initialTransactions.length > 0 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={initialTransactions.length}
+              pageSize={pageSize}
+              label="transactions"
+              onPageChange={setCurrentPage}
+            />
+          )}
         </section>
       </div>
     </div>

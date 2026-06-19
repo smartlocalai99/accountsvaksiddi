@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FaUserCircle, FaCog, FaSignOutAlt, FaSchool, FaChevronDown } from "react-icons/fa";
+import { FaUserCircle, FaSignOutAlt, FaSchool, FaChevronDown } from "react-icons/fa";
 import { getRoleLabel } from "@/lib/permissions";
 
 function getInitials(username) {
@@ -116,15 +116,6 @@ export default function ProfileDropdown({ user, onLogout }) {
           >
             <FaSchool className="text-slate-500" />
             School Profile
-          </Link>
-          <Link
-            href="/dashboard"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-            role="menuitem"
-          >
-            <FaCog className="text-slate-500" />
-            Settings
           </Link>
           <button
             type="button"

@@ -1,28 +1,9 @@
 import { Pool } from "pg";
-import { dummyAdmissions } from "@/lib/dummyData";
+import { getWhatsAppConfig } from "@/lib/whatsapp";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
-
-async function ensureFeePaymentsTable(client) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS public.fee_payments (
-      id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-      admission_id INTEGER NOT NULL REFERENCES public.admissions(id) ON DELETE CASCADE,
-      student_id INTEGER NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
-      fee_type VARCHAR(50) NOT NULL,
-      receipt_no VARCHAR(50) UNIQUE NOT NULL,
-      payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
-      amount_paid NUMERIC(12, 2) NOT NULL DEFAULT 0,
-      payment_mode VARCHAR(30) NOT NULL DEFAULT 'Cash',
-      reference_no VARCHAR(100),
-      collected_by VARCHAR(100),
-      remarks TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-}
 
 function cleanValue(value) {
   if (value === undefined || value === null || value === "") {
@@ -37,8 +18,100 @@ function cleanNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : 0;
 }
 
+function formatWhatsAppPhone(value) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+  return digits;
+}
+
+async function sendWhatsAppAdmission(admission) {
+  const config = await getWhatsAppConfig();
+  const workerUrl = config.workerUrl;
+  const workerApiKey = config.workerApiKey;
+
+  if (!workerUrl || !workerApiKey) {
+    throw new Error("WhatsApp worker credentials not configured");
+  }
+
+  const phone = formatWhatsAppPhone(admission.father_mobile || admission.mother_mobile);
+  if (!phone) {
+    throw new Error("No parent mobile number available for WhatsApp notification");
+  }
+
+  const parentName = admission.father_name || admission.mother_name || "Parent";
+  const studentName = admission.student_name;
+  const admissionNo = `VPS-${String(admission.id).padStart(5, "0")}`;
+  const className = admission.class_applying_for || "-";
+
+  const formatINR = (val) => Number(val || 0).toLocaleString("en-IN");
+  const fees = formatINR(admission.fees);
+  const discount = admission.discount || "0";
+  const finalFee = formatINR(admission.final_fee);
+
+  const message = `Dear ${parentName}, greetings from Vaksiddhi Public School (R), Manvi.
+
+We are pleased to inform you that the admission application for ${studentName} has been submitted successfully.
+
+Admission No: ${admissionNo}
+Class: ${className}
+Total School Fee: ₹${fees}
+Discount: ${discount}%
+Final Payable Fee: ₹${finalFee}
+
+Thank you.
+Vaksiddhi Public School (R), Manvi`;
+
+  const response = await fetch(`${workerUrl}/api/messages/send-test`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": workerApiKey,
+    },
+    body: JSON.stringify({
+      recipient_phone: phone,
+      message_text: message,
+    }),
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok || data?.success === false || data?.ok === false) {
+    throw new Error(data?.error || "WhatsApp worker failed");
+  }
+
+  return data;
+}
+
+async function ensureAdmissionColumns(client) {
+  await client.query(`
+    ALTER TABLE public.admissions
+      ADD COLUMN IF NOT EXISTS sts_no VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS pen_number VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS caste VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS student_type VARCHAR(30) NOT NULL DEFAULT 'Day Scholar',
+      ADD COLUMN IF NOT EXISTS hostel_fee NUMERIC(12, 2) NOT NULL DEFAULT 0
+  `);
+
+  await client.query(`
+    ALTER TABLE public.students
+      ADD COLUMN IF NOT EXISTS sts_no VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS pen_number VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS caste VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS student_type VARCHAR(30) NOT NULL DEFAULT 'Day Scholar'
+  `);
+}
+
 export default async function handler(req, res) {
   try {
+    await ensureAdmissionColumns(pool);
+
     if (req.method === "GET") {
       const result = await pool.query(
         `
@@ -50,14 +123,17 @@ export default async function handler(req, res) {
           age,
           blood_group,
           aadhar_last4,
-          nationality,
           religion,
+          sts_no,
+          pen_number,
+          caste,
           class_applying_for,
           previous_school_name,
           previous_class,
           transfer_certificate,
           medium,
-          program,
+          student_type,
+          hostel_fee,
           father_name,
           father_mobile,
           father_occupation,
@@ -77,10 +153,8 @@ export default async function handler(req, res) {
           village,
           pin_code,
           emergency_contact,
-          admission_status,
           created_at,
           parent_id,
-          admission_fee_mode,
           fees,
           discount,
           final_fee
@@ -105,18 +179,38 @@ export default async function handler(req, res) {
     const body = req.body;
 
     const fees = cleanNumber(body.fees);
+    const hostelFee = cleanNumber(body.hostel_fee);
     const discount = cleanNumber(body.discount);
 
     // discount is percentage
     const discountAmount = Math.round((fees * discount) / 100);
-    const finalFee = Math.max(fees - discountAmount, 0);
+    const finalFee = Math.max(fees - discountAmount, 0) + hostelFee;
 
     const client = await pool.connect();
+    let clientReleased = false;
 
     try {
       await client.query("BEGIN");
-      await ensureFeePaymentsTable(client);
 
+      const parentResult = await client.query(
+        `
+          INSERT INTO public.parents (
+            father_name,
+            father_mobile,
+            mother_name,
+            mother_mobile
+          ) VALUES ($1, $2, $3, $4)
+          RETURNING id;
+        `,
+        [
+          cleanValue(body.father_name),
+          cleanValue(body.father_mobile),
+          cleanValue(body.mother_name),
+          cleanValue(body.mother_mobile),
+        ]
+      );
+
+      const parentId = parentResult.rows[0]?.id || null;
       const admissionResult = await client.query(
         `
           INSERT INTO public.admissions (
@@ -126,16 +220,18 @@ export default async function handler(req, res) {
             age,
             blood_group,
             aadhar_last4,
-            nationality,
             religion,
+            sts_no,
+            pen_number,
+            caste,
 
             class_applying_for,
             previous_school_name,
             previous_class,
             transfer_certificate,
             medium,
-            program,
-            admission_fee_mode,
+            student_type,
+            hostel_fee,
 
             fees,
             discount,
@@ -150,6 +246,7 @@ export default async function handler(req, res) {
             mother_occupation,
 
             guardian_name,
+            parent_id,
 
             mother_aadhar_last4,
             mother_bank_account,
@@ -165,21 +262,21 @@ export default async function handler(req, res) {
             pin_code,
             emergency_contact
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8,
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
 
-            $9, $10, $11, $12, $13, $14, $15,
+            $11, $12, $13, $14, $15, $16, $17,
 
-            $16, $17, $18,
+            $18, $19, $20,
 
-            $19, $20, $21,
+            $21, $22, $23,
 
-            $22, $23, $24,
+            $24, $25, $26,
 
-            $25,
+            $27, $28,
 
-            $26, $27, $28, $29, $30,
+            $29, $30, $31, $32, $33,
 
-            $31, $32, $33, $34, $35, $36, $37
+            $34, $35, $36, $37, $38, $39, $40
           )
           RETURNING *;
         `,
@@ -190,16 +287,18 @@ export default async function handler(req, res) {
           cleanValue(body.age),
           cleanValue(body.blood_group),
           cleanValue(body.aadhar),
-          cleanValue(body.nationality),
           cleanValue(body.religion),
+          cleanValue(body.sts_no),
+          cleanValue(body.pen_number),
+          cleanValue(body.caste),
 
           cleanValue(body.class_applying),
           cleanValue(body.previous_school),
           cleanValue(body.previous_class),
           body.tc === "Yes" ? true : body.tc === "No" ? false : null,
           cleanValue(body.medium),
-          cleanValue(body.program),
-          cleanValue(body.admission_fee_mode),
+          cleanValue(body.student_type) || "Day Scholar",
+          hostelFee,
 
           fees,
           discount,
@@ -214,6 +313,7 @@ export default async function handler(req, res) {
           cleanValue(body.mother_occupation),
 
           cleanValue(body.guardian_name),
+          parentId,
 
           cleanValue(body.mother_aadhar),
           cleanValue(body.bank_account),
@@ -233,7 +333,7 @@ export default async function handler(req, res) {
 
       const admission = admissionResult.rows[0];
 
-      const studentResult = await client.query(
+      await client.query(
         `
           INSERT INTO public.students (
             full_name,
@@ -242,12 +342,15 @@ export default async function handler(req, res) {
             age,
             class,
             blood_group,
-            nationality,
             religion,
             medium,
+            sts_no,
+            pen_number,
+            caste,
+            student_type,
             admission_id,
             student_unique_id
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
           RETURNING id;
         `,
         [
@@ -257,79 +360,47 @@ export default async function handler(req, res) {
           cleanValue(body.age),
           cleanValue(body.class_applying),
           cleanValue(body.blood_group),
-          cleanValue(body.nationality),
           cleanValue(body.religion),
           cleanValue(body.medium),
+          cleanValue(body.sts_no),
+          cleanValue(body.pen_number),
+          cleanValue(body.caste),
+          cleanValue(body.student_type) || "Day Scholar",
           admission.id,
           `STU-${admission.id}`,
         ]
       );
 
-      const student = studentResult.rows[0];
-
-      const feePaymentResult = await client.query(
-        `
-          INSERT INTO public.fee_payments (
-            admission_id,
-            student_id,
-            fee_type,
-            receipt_no,
-            payment_date,
-            amount_paid,
-            payment_mode,
-            reference_no,
-            collected_by,
-            remarks
-          ) VALUES ($1, $2, $3, $4, CURRENT_DATE, $5, $6, $7, $8, $9)
-          RETURNING *;
-        `,
-        [
-          admission.id,
-          student.id,
-          "Admission Confirmation Fee",
-          `ADM-${admission.id}-${student.id}`,
-          2000,
-          cleanValue(body.admission_fee_mode) || "Cash",
-          null,
-          cleanValue(body.father_name) || cleanValue(body.student_name) || "Admission Desk",
-          "Initial admission payment",
-        ]
-      );
-
       await client.query("COMMIT");
+      client.release();
+      clientReleased = true;
 
-      return res.status(200).json({
-        success: true,
-        data: {
-          ...admission,
-          fee_payment: feePaymentResult.rows[0],
-        },
-      });
+      try {
+        await sendWhatsAppAdmission(admission);
+        return res.status(200).json({
+          success: true,
+          data: admission,
+          whatsappSent: true,
+        });
+      } catch (waError) {
+        console.error("Admission WhatsApp Error:", waError);
+        return res.status(200).json({
+          success: true,
+          data: admission,
+          whatsappSent: false,
+          whatsappError: waError.message || "Failed to send WhatsApp message",
+        });
+      }
     } catch (transactionError) {
       await client.query("ROLLBACK");
       throw transactionError;
     } finally {
-      client.release();
+      if (!clientReleased) {
+        client.release();
+      }
     }
   } catch (err) {
     console.error("Admission API Error:", err);
-
-    // Return dummy data for demo/development when database is unavailable
-    if (req.method === "GET") {
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        admissions: dummyAdmissions.map(a => ({
-          id: a.id,
-          student_name: a.student_name,
-          class_applying_for: a.class,
-          father_name: a.father_name,
-          fees: a.fees,
-          admission_status: a.status,
-          created_at: a.admission_date,
-        })),
-      });
-    }
 
     return res.status(500).json({
       success: false,

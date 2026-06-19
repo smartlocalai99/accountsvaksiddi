@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { withAuthPage } from "@/lib/withAuthPage";
 import Image from "next/image";
+import { withAuthPage } from "@/lib/withAuthPage";
 export const getServerSideProps = withAuthPage({ path: "/staff" });
 
 const emptyForm = {
@@ -165,188 +165,6 @@ function StaffModal({ open, mode, form, setForm, onClose, onSubmit, submitting }
             </div>
           </section>
 
-         {isView && (
-  <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-    <div className="mb-5 flex items-center justify-between">
-      <div>
-        <h3 className="text-lg font-bold text-slate-900">
-          Staff Documents
-        </h3>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Uploaded onboarding and verification documents.
-        </p>
-      </div>
-
-      <button className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700">
-        Upload Document
-      </button>
-    </div>
-
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      
-      {/* Resume */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="relative h-48 w-full bg-slate-100">
-          <Image
-            src="https://cdn.1millionresume.com/images/resume-templates/v3/Resume_Grey_Lining-w1410.jpg"
-            alt="Resume"
-            fill
-            className="object-cover"
-          />
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-bold text-slate-900">
-                Resume.pdf
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Uploaded on 12 Jun 2026
-              </p>
-            </div>
-
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-              Resume
-            </span>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              View
-            </button>
-
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              Download
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* B.Ed */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="relative h-48 w-full bg-slate-100">
-          <Image
-            src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhNhAxecfabvS6Rb82Lvl28zNjEE1-cuQdfhc2XvbxV-F6iFMLSpj4tCnXLERRVX_Uy33W2_N98cv2W1oOXHkG2Z-vUmQLyPyWbtFuUEoLaGHn-UpYM6JpmaEHQO7vPXzViQGzUo1Zp3wc/s1600/IMG_20190801_111805.jpg"
-            alt="B.Ed Certificate"
-            fill
-            className="object-cover"
-          />
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-bold text-slate-900">
-                BEd_Certificate.pdf
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Uploaded on 15 Jun 2026
-              </p>
-            </div>
-
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-              Certificate
-            </span>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              View
-            </button>
-
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              Download
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Aadhaar */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="relative h-48 w-full bg-slate-100">
-          <Image
-            src="https://imgv2-2-f.scribdassets.com/img/document/611948439/original/48bfd3493a/1?v=1"
-            alt="Aadhaar"
-            fill
-            className="object-cover"
-          />
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-bold text-slate-900">
-                Aadhaar_Copy.pdf
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Uploaded on 18 Jun 2026
-              </p>
-            </div>
-
-            <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
-              Identity
-            </span>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              View
-            </button>
-
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              Download
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Experience */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="relative h-48 w-full bg-slate-100">
-          <Image
-            src="https://i.pinimg.com/736x/0b/18/66/0b186677d783f98a224197ba0e27deb7.jpg"
-            alt="Experience Letter"
-            fill
-            className="object-cover"
-          />
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-bold text-slate-900">
-                Experience_Letter.pdf
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Uploaded on 20 Jun 2026
-              </p>
-            </div>
-
-            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-              Experience
-            </span>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              View
-            </button>
-
-            <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-              Download
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-)}
         </div>
 
         {!isView && (
@@ -391,9 +209,11 @@ export default function StaffPage() {
     }
   }
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchStaff();
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filteredStaff = useMemo(() => {
     return staff.filter((item) => {

@@ -7,16 +7,34 @@ export const getServerSideProps = withAuthPage({ path: "/students" });
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
+  async function fetchStudents() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/students");
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Unable to load students");
+      }
+
+      setStudents(data.students || []);
+    } catch (fetchError) {
+      setError(fetchError.message || "Unable to load students");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    fetch("/api/students")
-      .then((res) => res.json())
-      .then((data) => {
-        setStudents(data.students || []);
-        setLoading(false);
-      });
+    fetchStudents();
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filteredStudents = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -33,9 +51,12 @@ export default function StudentsPage() {
         student.age,
         student.class,
         student.blood_group,
-        student.nationality,
         student.religion,
         student.medium,
+        student.sts_no,
+        student.pen_number,
+        student.caste,
+        student.student_type,
         student.admission_id,
         student.student_unique_id,
       ]
@@ -63,8 +84,12 @@ export default function StudentsPage() {
       </div>
       {loading ? (
         <div>Loading...</div>
+      ) : error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {error}
+        </div>
       ) : (
-        <StudentsTable students={filteredStudents} />
+        <StudentsTable students={filteredStudents} onDeleted={fetchStudents} />
       )}
     </div>
   );

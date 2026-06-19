@@ -1,8 +1,48 @@
-import React from "react";
+import React, { useState } from "react";
 
-export default function StudentsTable({ students }) {
+export default function StudentsTable({ students, onDeleted }) {
+  const [deletingId, setDeletingId] = useState(null);
+  const [error, setError] = useState("");
+
+  async function deleteStudent(student) {
+    const studentName = student.full_name || "this student";
+    const confirmed = window.confirm(
+      `Delete ${studentName}? This will remove the student, admission, parent link, and fee records connected to this admission.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingId(student.id);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/students/${student.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Unable to delete student");
+      }
+
+      await onDeleted?.();
+    } catch (deleteError) {
+      setError(deleteError.message || "Unable to delete student");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
-    <div className="overflow-x-auto w-full">
+    <div className="w-full">
+      {error && (
+        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+      <div className="overflow-x-auto w-full">
       <table className="min-w-full bg-white border border-gray-200 rounded-lg text-xs md:text-sm">
         <thead>
           <tr className="bg-primary text-white">
@@ -13,11 +53,15 @@ export default function StudentsTable({ students }) {
             <th className="py-2 px-4 text-center">Age</th>
             <th className="py-2 px-4 text-center">Class</th>
             <th className="py-2 px-4 text-center">Blood Group</th>
-            <th className="py-2 px-4 text-center">Nationality</th>
+            <th className="py-2 px-4 text-center">STS No</th>
+            <th className="py-2 px-4 text-center">PEN Number</th>
+            <th className="py-2 px-4 text-center">Caste</th>
             <th className="py-2 px-4 text-center">Religion</th>
             <th className="py-2 px-4 text-center">Medium</th>
+            <th className="py-2 px-4 text-center">Type</th>
             <th className="py-2 px-4 text-center">Admission ID</th>
             <th className="py-2 px-4 text-center">Created At</th>
+            <th className="py-2 px-4 text-center">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -31,20 +75,34 @@ export default function StudentsTable({ students }) {
                 <td className="py-2 px-4 text-center">{student.age}</td>
                 <td className="py-2 px-4 text-center">{student.class || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.blood_group || '-'}</td>
-                <td className="py-2 px-4 text-center">{student.nationality || '-'}</td>
+                <td className="py-2 px-4 text-center">{student.sts_no || '-'}</td>
+                <td className="py-2 px-4 text-center">{student.pen_number || '-'}</td>
+                <td className="py-2 px-4 text-center">{student.caste || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.religion || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.medium || '-'}</td>
+                <td className="py-2 px-4 text-center">{student.student_type || '-'}</td>
                 <td className="py-2 px-4 text-center">{student.admission_id || '-'}</td>
                 <td className="py-2 px-4 text-center">{formatDateTime(student.created_at)}</td>
+                <td className="py-2 px-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => deleteStudent(student)}
+                    disabled={deletingId === student.id}
+                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingId === student.id ? "Deleting..." : "Delete"}
+                  </button>
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="13" className="text-center py-4">No student records found.</td>
+              <td colSpan="16" className="text-center py-4">No student records found.</td>
             </tr>
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

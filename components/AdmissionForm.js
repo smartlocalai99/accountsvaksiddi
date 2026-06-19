@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
-const ADMISSION_CONFIRMATION_FEE = 2000;
-
-const SCHOOL_NAME = "Quantum Heights English Medium School";
-const SCHOOL_ADDRESS = "Prakash Nagar, Kadapa, Andhra Pradesh";
-const SCHOOL_PHONE = "00000 00000";
+const SCHOOL_NAME = "Vaksiddhi Public School (R), Manvi ";
+const SCHOOL_ADDRESS = "Manvi, Raichur, Karnataka, India";
+const SCHOOL_PHONE = "+91 9449484004";
+const DEFAULT_LOGO = "/logos.png";
 
 export default function AdmissionForm({ embedded = false }) {
   const [form, setForm] = useState({});
+  const [feeRows, setFeeRows] = useState([]);
+  const [schoolSettings, setSchoolSettings] = useState(null);
   const [loading, setLoading] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [savedAdmission, setSavedAdmission] = useState(null);
@@ -21,11 +22,45 @@ export default function AdmissionForm({ embedded = false }) {
     return Number.isFinite(number) && number >= 0 ? number : 0;
   };
 
-  const feesAmount = toNumber(form.fees);
+  const selectedFeeRow = useMemo(
+    () => feeRows.find((row) => row.class_name === form.class_applying) || null,
+    [feeRows, form.class_applying]
+  );
+
+  const defaultSchoolFee = selectedFeeRow ? toNumber(selectedFeeRow.school_fee) : 0;
+  const defaultHostelFee = selectedFeeRow
+    ? toNumber(selectedFeeRow.hostel_first_term_fee) +
+      toNumber(selectedFeeRow.hostel_second_term_fee)
+    : 0;
+  const feesAmount = toNumber(form.fees || defaultSchoolFee);
+  const hostelFeeAmount =
+    form.student_type === "Hosteller"
+      ? toNumber(form.hostel_fee || defaultHostelFee)
+      : 0;
   const discountPercent = toNumber(form.discount);
   const discountAmount = Math.round((feesAmount * discountPercent) / 100);
-  const finalFeeAmount = Math.max(feesAmount - discountAmount, 0);
+  const netSchoolFeeAmount = Math.max(feesAmount - discountAmount, 0);
+  const finalFeeAmount = netSchoolFeeAmount + hostelFeeAmount;
   const isDiscountInvalid = discountPercent > 100;
+
+  const letterhead = useMemo(
+    () => ({
+      logo:
+        schoolSettings?.letterhead_logo ||
+        schoolSettings?.school_logo ||
+        DEFAULT_LOGO,
+      schoolName:
+        schoolSettings?.letterhead_school_name ||
+        schoolSettings?.school_name ||
+        SCHOOL_NAME,
+      address:
+        schoolSettings?.letterhead_address ||
+        schoolSettings?.school_address ||
+        SCHOOL_ADDRESS,
+      phone: schoolSettings?.contact_number || SCHOOL_PHONE,
+    }),
+    [schoolSettings]
+  );
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-IN", {
@@ -55,91 +90,30 @@ export default function AdmissionForm({ embedded = false }) {
     });
   };
 
-  const numberToWords = (num) => {
-    const number = Math.floor(Number(num) || 0);
+  useEffect(() => {
+    async function loadAdmissionSettings() {
+      try {
+        const [settingsResponse, feesResponse] = await Promise.all([
+          fetch("/api/school-settings"),
+          fetch("/api/fee-structure"),
+        ]);
+        const settingsData = await settingsResponse.json();
+        const feesData = await feesResponse.json();
 
-    if (number === 0) return "Zero";
+        if (settingsResponse.ok && settingsData.success) {
+          setSchoolSettings(settingsData.data || null);
+        }
 
-    const ones = [
-      "",
-      "One",
-      "Two",
-      "Three",
-      "Four",
-      "Five",
-      "Six",
-      "Seven",
-      "Eight",
-      "Nine",
-      "Ten",
-      "Eleven",
-      "Twelve",
-      "Thirteen",
-      "Fourteen",
-      "Fifteen",
-      "Sixteen",
-      "Seventeen",
-      "Eighteen",
-      "Nineteen",
-    ];
-
-    const tens = [
-      "",
-      "",
-      "Twenty",
-      "Thirty",
-      "Forty",
-      "Fifty",
-      "Sixty",
-      "Seventy",
-      "Eighty",
-      "Ninety",
-    ];
-
-    const convertBelowThousand = (n) => {
-      let words = "";
-
-      if (n >= 100) {
-        words += ones[Math.floor(n / 100)] + " Hundred ";
-        n %= 100;
+        if (feesResponse.ok && feesData.success) {
+          setFeeRows(feesData.rows || []);
+        }
+      } catch (error) {
+        console.error("Admission settings load error:", error);
       }
-
-      if (n >= 20) {
-        words += tens[Math.floor(n / 10)] + " ";
-        n %= 10;
-      }
-
-      if (n > 0) {
-        words += ones[n] + " ";
-      }
-
-      return words.trim();
-    };
-
-    let n = number;
-    let words = "";
-
-    if (n >= 10000000) {
-      words += convertBelowThousand(Math.floor(n / 10000000)) + " Crore ";
-      n %= 10000000;
     }
 
-    if (n >= 100000) {
-      words += convertBelowThousand(Math.floor(n / 100000)) + " Lakh ";
-      n %= 100000;
-    }
-
-    if (n >= 1000) {
-      words += convertBelowThousand(Math.floor(n / 1000)) + " Thousand ";
-      n %= 1000;
-    }
-
-    if (n > 0) {
-      words += convertBelowThousand(n);
-    }
-
-    return words.trim();
-  };
+    loadAdmissionSettings();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -147,7 +121,29 @@ export default function AdmissionForm({ embedded = false }) {
     setForm((previous) => ({
       ...previous,
       [name]: value,
+      ...(name === "class_applying"
+        ? getFeeDefaults(value, previous.student_type)
+        : {}),
+      ...(name === "student_type"
+        ? getFeeDefaults(previous.class_applying, value)
+        : {}),
     }));
+  };
+
+  const getFeeDefaults = (className, studentType) => {
+    const row = feeRows.find((item) => item.class_name === className);
+
+    if (!row) {
+      return studentType === "Hosteller" ? {} : { hostel_fee: "0" };
+    }
+
+    const hostelTotal =
+      toNumber(row.hostel_first_term_fee) + toNumber(row.hostel_second_term_fee);
+
+    return {
+      fees: String(row.school_fee || 0),
+      hostel_fee: studentType === "Hosteller" ? String(hostelTotal) : "0",
+    };
   };
 
   const handleOnlyDigits = (name, value, maxLength) => {
@@ -405,6 +401,7 @@ export default function AdmissionForm({ embedded = false }) {
     const payload = {
       ...form,
       fees: feesAmount,
+      hostel_fee: hostelFeeAmount,
       discount: discountPercent,
       final_fee: finalFeeAmount,
     };
@@ -423,6 +420,9 @@ export default function AdmissionForm({ embedded = false }) {
       if (data.success) {
         const savedData = {
           ...payload,
+          hostel_first_term_fee: selectedFeeRow?.hostel_first_term_fee || 0,
+          hostel_second_term_fee: selectedFeeRow?.hostel_second_term_fee || 0,
+          letterhead,
           ...(data.data || {}),
         };
 
@@ -432,15 +432,19 @@ export default function AdmissionForm({ embedded = false }) {
         Swal.fire({
           icon: "success",
           title: "Admission Saved!",
-          text: "Receipt is ready for printing.",
-          timer: 700,
+          text: data.whatsappSent
+            ? "Receipt is ready. WhatsApp message sent!"
+            : data.whatsappError
+            ? `Receipt is ready. WhatsApp failed: ${data.whatsappError}`
+            : "Receipt is ready for printing.",
+          timer: 2000,
           showConfirmButton: false,
         });
 
         setTimeout(() => {
           Swal.close();
           printReceiptOnly();
-        }, 900);
+        }, 2200);
       } else {
         Swal.fire({
           icon: "error",
@@ -468,8 +472,12 @@ export default function AdmissionForm({ embedded = false }) {
   const receiptData = savedAdmission || {
     ...form,
     fees: feesAmount,
+    hostel_fee: hostelFeeAmount,
+    hostel_first_term_fee: selectedFeeRow?.hostel_first_term_fee || 0,
+    hostel_second_term_fee: selectedFeeRow?.hostel_second_term_fee || 0,
     discount: discountPercent,
     final_fee: finalFeeAmount,
+    letterhead,
     created_at: new Date().toISOString(),
   };
 
@@ -552,10 +560,17 @@ export default function AdmissionForm({ embedded = false }) {
               />
 
               <Input
-                label="Nationality"
-                name="nationality"
+                label="STS No"
+                name="sts_no"
                 onChange={handleChange}
-                value={form.nationality || ""}
+                value={form.sts_no || ""}
+              />
+
+              <Input
+                label="PEN Number"
+                name="pen_number"
+                onChange={handleChange}
+                value={form.pen_number || ""}
               />
 
               <Input
@@ -565,25 +580,39 @@ export default function AdmissionForm({ embedded = false }) {
                 value={form.religion || ""}
               />
 
-              <Select
-                label="Admission Fee Mode"
-                name="admission_fee_mode"
+              <Input
+                label="Caste"
+                name="caste"
                 onChange={handleChange}
-                value={form.admission_fee_mode || ""}
-              >
-                <option value="">Select Payment Mode</option>
-                <option value="PhonePe">PhonePe</option>
-                <option value="Cash">Cash</option>
-              </Select>
+                value={form.caste || ""}
+              />
+
             </Section>
 
             <Section title="Academic Details">
-              <Input
+              <Select
                 label="Class Applying For"
                 name="class_applying"
                 onChange={handleChange}
                 value={form.class_applying || ""}
-              />
+              >
+                <option value="">Select Class</option>
+                {feeRows.map((row) => (
+                  <option key={row.class_name} value={row.class_name}>
+                    {row.class_name}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Student Type"
+                name="student_type"
+                onChange={handleChange}
+                value={form.student_type || "Day Scholar"}
+              >
+                <option value="Day Scholar">Day Scholar</option>
+                <option value="Hosteller">Hosteller</option>
+              </Select>
 
               <Input
                 label="Previous School"
@@ -618,19 +647,7 @@ export default function AdmissionForm({ embedded = false }) {
               >
                 <option value="">Select</option>
                 <option value="English">English</option>
-                <option value="Telugu">Telugu</option>
-              </Select>
-
-              <Select
-                label="Program"
-                name="program"
-                onChange={handleChange}
-                value={form.program || ""}
-              >
-                <option value="">Select</option>
-                <option value="Quantum">Quantum</option>
-                <option value="Quantum Pro">Quantum Pro</option>
-                <option value="Quantum Elite">Quantum Elite</option>
+                <option value="Kannada">Kannada</option>
               </Select>
             </Section>
           </div>
@@ -643,9 +660,22 @@ export default function AdmissionForm({ embedded = false }) {
               min="0"
               inputMode="numeric"
               onChange={handleChange}
-              value={form.fees || ""}
-              placeholder="Enter total school fees"
+              value={feesAmount || ""}
+              placeholder="Auto-filled from selected class"
             />
+
+            {form.student_type === "Hosteller" ? (
+              <Input
+                label="Hostel Fees"
+                type="number"
+                name="hostel_fee"
+                min="0"
+                inputMode="numeric"
+                onChange={handleChange}
+                value={hostelFeeAmount || ""}
+                placeholder="Auto-filled for hosteller"
+              />
+            ) : null}
 
             <Input
               label="Discount (%)"
@@ -672,7 +702,7 @@ export default function AdmissionForm({ embedded = false }) {
                 Fee Summary
               </p>
 
-              <div className="mt-3 grid gap-3 text-sm md:grid-cols-4">
+              <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
                 <div className="rounded-lg bg-white p-3">
                   <p className="text-slate-500">Total School Fees</p>
                   <p className="mt-1 font-bold text-slate-900">
@@ -680,31 +710,38 @@ export default function AdmissionForm({ embedded = false }) {
                   </p>
                 </div>
 
-                <div className="rounded-lg bg-white p-3">
-                  <p className="text-slate-500">Discount</p>
-                  <p className="mt-1 font-bold text-red-600">
-                    {discountPercent || 0}%
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-white p-3">
-                  <p className="text-slate-500">Discount Amount</p>
-                  <p className="mt-1 font-bold text-red-600">
-                    - {formatCurrency(discountAmount)}
-                  </p>
-                </div>
-
                 <div className="rounded-lg bg-emerald-50 p-3">
-                  <p className="text-emerald-700">Final School Fee</p>
+                  <p className="text-emerald-700">Net School Fee</p>
                   <p className="mt-1 font-black text-emerald-800">
+                    {formatCurrency(netSchoolFeeAmount)}
+                  </p>
+                </div>
+
+                {form.student_type === "Hosteller" ? (
+                  <div className="rounded-lg bg-sky-50 p-3">
+                    <p className="text-sky-700">Hostel Fee</p>
+                    <p className="mt-1 font-black text-sky-800">
+                      {formatCurrency(hostelFeeAmount)}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="rounded-lg bg-slate-900 p-3 text-white">
+                  <p>Total Payable</p>
+                  <p className="mt-1 font-black">
                     {formatCurrency(finalFeeAmount)}
                   </p>
                 </div>
               </div>
 
-              <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-                Admission confirmation receipt will be for fixed ₹2,000 only.
-              </p>
+              {form.student_type === "Hosteller" && selectedFeeRow ? (
+                <p className="mt-3 rounded-lg bg-sky-50 p-3 text-sm font-semibold text-sky-800">
+                  Hostel fee: 1st Term ₹
+                  {formatAmountPlain(selectedFeeRow.hostel_first_term_fee)} + 2nd
+                  Term ₹{formatAmountPlain(selectedFeeRow.hostel_second_term_fee)}
+                </p>
+              ) : null}
+
             </div>
           </Section>
 
@@ -875,7 +912,6 @@ export default function AdmissionForm({ embedded = false }) {
           onPrintAgain={printAgain}
           formatAmountPlain={formatAmountPlain}
           formatDate={formatDate}
-          numberToWords={numberToWords}
         />
       )}
     </>
@@ -891,7 +927,6 @@ function ReceiptPreviewModal({
   onPrintAgain,
   formatAmountPlain,
   formatDate,
-  numberToWords,
 }) {
   return (
     <div className="receipt-modal-shell fixed inset-0 z-50 overflow-auto bg-black/60 p-4 backdrop-blur-sm">
@@ -945,7 +980,6 @@ function ReceiptPreviewModal({
             isSaved={isSaved}
             formatAmountPlain={formatAmountPlain}
             formatDate={formatDate}
-            numberToWords={numberToWords}
           />
         </div>
       </div>
@@ -958,7 +992,6 @@ function ReceiptSheet({
   isSaved,
   formatAmountPlain,
   formatDate,
-  numberToWords,
 }) {
   return (
     <div className="print-receipt-sheet grid gap-6 md:grid-cols-2">
@@ -967,7 +1000,6 @@ function ReceiptSheet({
         isSaved={isSaved}
         formatAmountPlain={formatAmountPlain}
         formatDate={formatDate}
-        numberToWords={numberToWords}
         copyLabel="School Copy"
       />
 
@@ -976,7 +1008,6 @@ function ReceiptSheet({
         isSaved={isSaved}
         formatAmountPlain={formatAmountPlain}
         formatDate={formatDate}
-        numberToWords={numberToWords}
         copyLabel="Parent Copy"
       />
     </div>
@@ -988,7 +1019,6 @@ function ReceiptCopy({
   isSaved,
   formatAmountPlain,
   formatDate,
-  numberToWords,
   copyLabel,
 }) {
   const receiptNo =
@@ -996,34 +1026,47 @@ function ReceiptCopy({
 
   const registrationNo =
     isSaved && data?.id
-      ? `QH-${String(data.id).padStart(5, "0")}`
+      ? `VPS-${String(data.id).padStart(5, "0")}`
       : "Will generate after submit";
 
-  const admissionFee = ADMISSION_CONFIRMATION_FEE;
-  const paidFee = ADMISSION_CONFIRMATION_FEE;
-  const balanceFee = 0;
-
   const schoolTotalFee = Number(data?.fees || 0);
+  const hostelFee = Number(data?.hostel_fee || 0);
+  const hostelFirstTermFee = Number(data?.hostel_first_term_fee || 0);
+  const hostelSecondTermFee = Number(data?.hostel_second_term_fee || 0);
   const schoolDiscount = Number(data?.discount || 0);
+  const schoolDiscountAmount = Math.round((schoolTotalFee * schoolDiscount) / 100);
+  const netSchoolFee = Math.max(schoolTotalFee - schoolDiscountAmount, 0);
   const schoolFinalFee = Number(data?.final_fee || 0);
+  const letterhead = data?.letterhead || {};
+  const logo = letterhead.logo || DEFAULT_LOGO;
+  const schoolName = letterhead.schoolName || SCHOOL_NAME;
+  const schoolAddress = letterhead.address || SCHOOL_ADDRESS;
+  const schoolPhone = letterhead.phone || SCHOOL_PHONE;
+  const className = data?.class_applying_for || data?.class_applying || "-";
 
   return (
     <div className="receipt-copy border-2 border-black bg-white text-[11px] leading-tight text-black">
       <div className="receipt-p-2 border-b-2 border-black text-center">
         <div className="flex items-center justify-center gap-3">
-        
-
           <div>
-           <img
-            src="/logo.jpeg"
-            alt="School Logo"
-className="receipt-logo h-28 w-[420px] object-contain"          />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logo}
+              alt="School Logo"
+              className="receipt-logo h-28 w-[420px] object-contain"
+            />
           </div>
         </div>
 
+        <p className="mt-1 text-sm font-black uppercase tracking-wide">
+          {schoolName}
+        </p>
+        <p className="text-[10px] font-semibold">{schoolAddress}</p>
+        <p className="text-[10px] font-semibold">Phone: {schoolPhone}</p>
+
         <div className="mt-2 border-y-2 border-black py-1">
           <h2 className="receipt-main-title text-xl font-black tracking-[0.15em]">
-            ADMISSION CONFIRMATION RECEIPT
+            ADMISSION CONFIRMATION
           </h2>
         </div>
 
@@ -1047,91 +1090,51 @@ className="receipt-logo h-28 w-[420px] object-contain"          />
       <ReceiptRow label="Regn No." value={registrationNo} />
       <ReceiptRow label="Student Name" value={data?.student_name || "-"} />
       <ReceiptRow label="Father's Name" value={data?.father_name || "-"} />
+      <ReceiptRow label="STS No." value={data?.sts_no || "-"} />
+      <ReceiptRow label="PEN Number" value={data?.pen_number || "-"} />
+      <ReceiptRow label="Caste" value={data?.caste || "-"} />
 
       <div className="grid grid-cols-2 border-b border-black">
         <div className="receipt-p-1 border-r border-black">
           <span className="font-black">Class / Standard</span>
-          <span className="ml-2 font-bold">{data?.class_applying || "-"}</span>
+          <span className="ml-2 font-bold">{className}</span>
         </div>
 
         <div className="receipt-p-1">
-          <span className="font-black">Program :</span>
-          <span className="ml-2 font-bold">{data?.program || "-"}</span>
+          <span className="font-black">Medium :</span>
+          <span className="ml-2 font-bold">{data?.medium || "-"}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_95px] border-b border-black">
-        <div className="receipt-p-1 border-r border-black text-center font-black">
-          Admission Payment Details
-        </div>
-
-        <div className="receipt-p-1 text-center font-black">Amount</div>
-      </div>
-
-      <div className="grid grid-cols-[1fr_95px] border-b border-black">
-        <div className="receipt-p-2 border-r border-black">
-          <p className="font-black">Admission Confirmation Fee</p>
-          <p className="mt-1 text-[10px]">
-            Payment Mode: {data?.admission_fee_mode || "-"}
-          </p>
-        </div>
-
-        <div className="receipt-p-2 flex items-center justify-end font-black">
-          {formatAmountPlain(admissionFee)}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-[1fr_95px] border-b border-black bg-gray-200">
-        <div className="receipt-p-1 border-r border-black font-black">
-          Admission Fee Paid
-        </div>
-
-        <div className="receipt-p-1 text-right font-black">
-          {formatAmountPlain(paidFee)}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-[1fr_95px] border-b border-black">
-        <div className="receipt-p-2 border-r border-black">
-          <div className="space-y-1 pl-8 font-black">
-            <p>Admission Fee</p>
-            <p>Paid Fee</p>
-            <p>Balance Fee</p>
-          </div>
-        </div>
-
-        <div className="receipt-p-2 text-right font-black">
-          <div className="space-y-1">
-            <p>{formatAmountPlain(admissionFee)}</p>
-            <p>{formatAmountPlain(paidFee)}</p>
-            <p>{formatAmountPlain(balanceFee)}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="receipt-p-1 border-b border-black font-black">
-        Rupees {numberToWords(paidFee)} Only
-      </div>
+      <ReceiptRow label="Student Type" value={data?.student_type || "Day Scholar"} />
 
       <div className="receipt-p-1 border-b border-black">
         <p className="font-black">School Fee Details:</p>
         <p className="mt-1 text-[10px]">
-          Total School Fee: ₹{formatAmountPlain(schoolTotalFee)} | Discount:{" "}
-          {schoolDiscount}% | Final School Fee: ₹
-          {formatAmountPlain(schoolFinalFee)}
+          School Fee: ₹{formatAmountPlain(schoolTotalFee)} | Discount:{" "}
+          {schoolDiscount}% (-₹{formatAmountPlain(schoolDiscountAmount)}) | Net
+          School Fee: ₹{formatAmountPlain(netSchoolFee)}
+        </p>
+        {hostelFee > 0 ? (
+          <p className="mt-1 text-[10px]">
+            Hostel Fee: 1st Term ₹{formatAmountPlain(hostelFirstTermFee)} + 2nd
+            Term ₹{formatAmountPlain(hostelSecondTermFee)} = ₹
+            {formatAmountPlain(hostelFee)}
+          </p>
+        ) : null}
+        <p className="mt-1 text-[10px] font-black">
+          Total Payable: ₹{formatAmountPlain(schoolFinalFee)}
         </p>
         <p className="mt-1 text-[10px] font-semibold">
-          This receipt confirms only the admission confirmation fee payment.
+          This document confirms the admission entry only. Fee payments are
+          recorded separately.
         </p>
       </div>
 
       <div className="grid grid-cols-2 text-[10px]">
         <div className="receipt-p-1">
           <p className="font-black">Note:</p>
-          <p>
-            Admission confirmation fee once paid will be recorded in school
-            accounts.
-          </p>
+          <p>No admission confirmation fee is collected with this form.</p>
         </div>
 
         <div className="receipt-p-1 text-right">

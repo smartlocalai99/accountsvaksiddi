@@ -5,11 +5,6 @@ import {
   FaRupeeSign,
   FaTags,
   FaCalendarAlt,
-  FaUpload,
-  FaMagic,
-  FaFilePdf,
-  FaImage,
-  FaSpinner,
 } from "react-icons/fa";
 import PaginationControls from "@/components/PaginationControls";
 import { withAuthPage } from "@/lib/withAuthPage";
@@ -26,8 +21,22 @@ const initialForm = {
   category: "",
   amount: "",
   notes: "",
-  receipt_file_name: "",
 };
+
+const expenseCategories = [
+  "Petty Cash",
+  "Electricity",
+  "Stationery",
+  "Maintenance",
+  "Cleaning Supplies",
+  "Transport",
+  "Exam Expenses",
+  "Events",
+  "Staff Welfare",
+  "Internet / Phone",
+  "Miscellaneous",
+  "Others",
+];
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -37,19 +46,11 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
-function getFileIcon(fileName = "") {
-  return fileName.toLowerCase().endsWith(".pdf") ? FaFilePdf : FaImage;
-}
-
 export default function ExpensesPage() {
   const [form, setForm] = useState(initialForm);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [scanLoading, setScanLoading] = useState(false);
   const [error, setError] = useState("");
-  const [scanMessage, setScanMessage] = useState("");
-  const [selectedReceiptFile, setSelectedReceiptFile] = useState(null);
-  const [scanPreview, setScanPreview] = useState(null);
   const [expensePage, setExpensePage] = useState(1);
 
   const totalExpense = useMemo(
@@ -92,6 +93,7 @@ export default function ExpensesPage() {
     }
   }
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchExpenses();
   }, []);
@@ -101,89 +103,11 @@ export default function ExpensesPage() {
       setExpensePage(1);
     }
   }, [expensePage, expenseTotalPages]);
-
-  useEffect(() => {
-    return () => {
-      if (scanPreview) {
-        URL.revokeObjectURL(scanPreview);
-      }
-    };
-  }, [scanPreview]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
-  }
-
-  async function handleReceiptUpload(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    setSelectedReceiptFile(file);
-    setScanMessage("");
-    setError("");
-
-    setForm((current) => ({
-      ...current,
-      receipt_file_name: file.name,
-    }));
-
-    if (scanPreview) {
-      URL.revokeObjectURL(scanPreview);
-    }
-
-    if (file.type.startsWith("image/")) {
-      setScanPreview(URL.createObjectURL(file));
-    } else {
-      setScanPreview(null);
-    }
-
-    setScanLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("receipt", file);
-
-      const res = await fetch("/api/expenses/scan-receipt", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Unable to scan receipt");
-      }
-
-      const extracted = data.extracted || {};
-
-      setForm((current) => ({
-        ...current,
-        date: extracted.date || current.date,
-        title: extracted.title || current.title,
-        category: extracted.category || current.category,
-        amount: extracted.amount || current.amount,
-        notes:
-          extracted.notes ||
-          current.notes ||
-          "Auto-filled from uploaded bill. Please verify before saving.",
-        receipt_file_name: file.name,
-      }));
-
-      setScanMessage(
-        "Bill scanned and form auto-filled. Please verify details before saving."
-      );
-    } catch (scanError) {
-      console.error("Receipt scan failed:", scanError);
-      setScanMessage(
-        "Could not fully scan this bill. You can still enter details manually. For handwritten bills, clear photo quality improves results."
-      );
-    } finally {
-      setScanLoading(false);
-    }
   }
 
   async function addExpense(event) {
@@ -216,13 +140,6 @@ export default function ExpensesPage() {
         ...initialForm,
         date: getToday(),
       });
-      setSelectedReceiptFile(null);
-      setScanMessage("");
-
-      if (scanPreview) {
-        URL.revokeObjectURL(scanPreview);
-        setScanPreview(null);
-      }
 
       await fetchExpenses();
     } catch (saveError) {
@@ -237,14 +154,7 @@ export default function ExpensesPage() {
       ...initialForm,
       date: getToday(),
     });
-    setSelectedReceiptFile(null);
-    setScanMessage("");
     setError("");
-
-    if (scanPreview) {
-      URL.revokeObjectURL(scanPreview);
-      setScanPreview(null);
-    }
   }
 
   return (
@@ -260,8 +170,7 @@ export default function ExpensesPage() {
                 Record school expenses
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                Upload printed or handwritten bills. SmartBooks AI will try to
-                read date, amount, title, and category automatically.
+                Enter school expense details from real bills and vouchers.
               </p>
             </div>
 
@@ -287,12 +196,6 @@ export default function ExpensesPage() {
           </div>
         )}
 
-        {scanMessage && (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-800">
-            {scanMessage}
-          </div>
-        )}
-
         <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <form
             onSubmit={addExpense}
@@ -307,64 +210,9 @@ export default function ExpensesPage() {
                   New expense
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Upload bill first or enter manually.
+                  Enter amount, category, date, and notes.
                 </p>
               </div>
-            </div>
-
-            <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-black text-slate-900">
-                    AI bill auto-fill
-                  </p>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                    Supports image and PDF bills. For handwritten bills, upload
-                    a clear photo with good lighting.
-                  </p>
-                </div>
-
-                <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#08516d] px-5 py-3 text-sm font-black text-white transition hover:bg-[#06445c]">
-                  {scanLoading ? (
-                    <FaSpinner className="animate-spin" />
-                  ) : (
-                    <FaUpload />
-                  )}
-                  {scanLoading ? "Scanning..." : "Upload Bill"}
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleReceiptUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {selectedReceiptFile && (
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-center gap-3">
-                    <FileIcon fileName={selectedReceiptFile.name} />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-900">
-                        {selectedReceiptFile.name}
-                      </p>
-                      <p className="text-xs font-semibold text-slate-500">
-                        {scanLoading
-                          ? "Reading bill and extracting details..."
-                          : "Uploaded bill attached"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {scanPreview && (
-                    <img
-                      src={scanPreview}
-                      alt="Receipt preview"
-                      className="mt-4 max-h-64 w-full rounded-2xl object-contain bg-slate-50"
-                    />
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -401,23 +249,19 @@ export default function ExpensesPage() {
               </Field>
 
               <Field label="Category" icon={FaTags}>
-                <input
+                <select
                   name="category"
                   value={form.category}
                   onChange={handleChange}
-                  placeholder="Office, Transport, Stationery..."
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
-                />
-              </Field>
-
-              <Field label="Receipt File" icon={FaReceipt}>
-                <input
-                  name="receipt_file_name"
-                  value={form.receipt_file_name}
-                  onChange={handleChange}
-                  placeholder="Receipt file name"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
-                />
+                >
+                  <option value="">Select category</option>
+                  {expenseCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
               </Field>
 
               <Field label="Notes" icon={FaReceipt} className="sm:col-span-2">
@@ -487,9 +331,6 @@ export default function ExpensesPage() {
                     </p>
                   ) : null}
 
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    {item.receipt_file_name || "No receipt uploaded"}
-                  </p>
                 </div>
               ))}
 
@@ -517,16 +358,6 @@ export default function ExpensesPage() {
           </div>
         </section>
       </div>
-    </div>
-  );
-}
-
-function FileIcon({ fileName }) {
-  const Icon = getFileIcon(fileName);
-
-  return (
-    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-[#08516d] shadow-sm">
-      <Icon />
     </div>
   );
 }

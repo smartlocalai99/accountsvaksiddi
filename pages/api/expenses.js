@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyExpenses } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -22,7 +21,6 @@ async function ensureExpensesTable() {
       category VARCHAR(100) NOT NULL,
       amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
       notes TEXT,
-      receipt_file_name VARCHAR(255),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -55,7 +53,6 @@ export default async function handler(req, res) {
             category,
             amount,
             notes,
-            receipt_file_name,
             created_at
           FROM public.expenses
           ORDER BY created_at DESC NULLS LAST, id DESC
@@ -92,9 +89,8 @@ export default async function handler(req, res) {
           title,
           category,
           amount,
-          notes,
-          receipt_file_name
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          notes
+        ) VALUES ($1, $2, $3, $4, $5)
         RETURNING *
       `,
       [
@@ -103,7 +99,6 @@ export default async function handler(req, res) {
         category,
         amount,
         cleanValue(body.notes),
-        cleanValue(body.receipt_file_name),
       ]
     );
 
@@ -113,15 +108,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Expenses API Error:", err);
-
-    // Return dummy data for demo/development when database is unavailable
-    if (req.method === "GET") {
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        expenses: dummyExpenses,
-      });
-    }
 
     return res.status(500).json({
       success: false,

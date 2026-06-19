@@ -1,3 +1,5 @@
+import { getWhatsAppConfig } from "@/lib/whatsapp";
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -24,13 +26,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const workerUrl = process.env.WHATSAPP_WORKER_URL;
-    const workerApiKey = process.env.WHATSAPP_WORKER_API_KEY;
+    const config = await getWhatsAppConfig();
+    const workerUrl = config.workerUrl;
+    const workerApiKey = config.workerApiKey;
 
     if (!workerUrl || !workerApiKey) {
       return res.status(500).json({
         success: false,
-        error: "WhatsApp worker env variables missing",
+        error: "WhatsApp worker credentials not configured",
       });
     }
 

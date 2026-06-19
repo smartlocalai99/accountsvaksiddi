@@ -1,5 +1,4 @@
 import { Pool } from "pg";
-import { dummyPayroll } from "@/lib/dummyData";
 
 const pool =
   global.pgPool ||
@@ -203,25 +202,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   } catch (err) {
     console.error("Payroll API Error:", err);
-    
-    // Return dummy data for demo/development when database is unavailable
-    if (req.method === "GET") {
-      const totalSalaries = dummyPayroll.reduce((sum, p) => sum + p.net_salary, 0);
-      const paidSalaries = dummyPayroll.filter(p => p.status === "Paid").reduce((sum, p) => sum + p.net_salary, 0);
-      const pendingSalaries = totalSalaries - paidSalaries;
-
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        payroll: dummyPayroll,
-        staff: dummyPayroll.map(p => ({ id: p.id, full_name: p.staff_name, designation: p.position, staff_type: "Teaching", monthly_salary: p.gross_salary })),
-        metrics: {
-          totalPayroll: totalSalaries,
-          paidPayroll: paidSalaries,
-          pendingPayroll: pendingSalaries,
-        },
-      });
-    }
 
     return res.status(500).json({ success: false, error: err.message });
   }
