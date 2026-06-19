@@ -1707,31 +1707,6 @@ export default function FeesPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    ref={(node) => {
-                      if (node) {
-                        node.indeterminate = isIndeterminate;
-                      }
-                    }}
-                    onChange={toggleAllSelection}
-                    className="h-4 w-4 rounded border-slate-300 text-green-600"
-                  />
-                  Select all due parents
-                </label>
-
-                <button
-                  type="button"
-                  onClick={openBulkWhatsApp}
-                  disabled={selectedRows.length === 0}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <WhatsAppIcon />
-                  Notify selected parents ({selectedRows.length})
-                </button>
-
                 <button
                   type="button"
                   onClick={exportLedgerToExcel}
@@ -1831,7 +1806,6 @@ export default function FeesPage() {
               <thead style={{ backgroundColor: "#08516d" }}>
                 <tr>
                   {[
-                    "Select",
                     "Student",
                     "Class",
                     "Parent",
@@ -1864,16 +1838,6 @@ export default function FeesPage() {
                       }`}
                       className="hover:bg-slate-50"
                     >
-                      <td className="px-5 py-4 align-top">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.admission_id)}
-                          onChange={() => toggleRowSelection(item)}
-                          disabled={!hasPhone}
-                          className="h-4 w-4 rounded border-slate-300 text-green-600 disabled:cursor-not-allowed disabled:opacity-40"
-                        />
-                      </td>
-
                       <td className="px-5 py-4">
                         <p className="font-semibold text-slate-900">
                           {item.student_name}
