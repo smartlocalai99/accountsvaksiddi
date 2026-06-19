@@ -30,7 +30,7 @@ export default function AdmissionForm({ embedded = false }) {
   const defaultSchoolFee = selectedFeeRow ? toNumber(selectedFeeRow.school_fee) : 0;
   const defaultHostelFee = selectedFeeRow
     ? toNumber(selectedFeeRow.hostel_first_term_fee) +
-      toNumber(selectedFeeRow.hostel_second_term_fee)
+    toNumber(selectedFeeRow.hostel_second_term_fee)
     : 0;
   const feesAmount = toNumber(form.fees || defaultSchoolFee);
   const hostelFeeAmount =
@@ -435,8 +435,8 @@ export default function AdmissionForm({ embedded = false }) {
           text: data.whatsappSent
             ? "Receipt is ready. WhatsApp message sent!"
             : data.whatsappError
-            ? `Receipt is ready. WhatsApp failed: ${data.whatsappError}`
-            : "Receipt is ready for printing.",
+              ? `Receipt is ready. WhatsApp failed: ${data.whatsappError}`
+              : "Receipt is ready for printing.",
           timer: 2000,
           showConfirmButton: false,
         });
@@ -494,7 +494,7 @@ export default function AdmissionForm({ embedded = false }) {
           }
         >
           <h1 className="text-center text-2xl font-bold">
-            Quantum Heights Admission Form 2026 - 2027
+            Vaksiddhi Admission Form 2026 - 2027
           </h1>
 
           <div className="grid gap-6 lg:grid-cols-2">
