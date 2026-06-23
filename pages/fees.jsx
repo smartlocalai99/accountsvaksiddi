@@ -527,6 +527,7 @@ export default function FeesPage() {
       ) || null,
     [rows, entryForm.admission_id]
   );
+  const hasSelectedCollectionAdmission = Boolean(entryForm.admission_id);
 
   const allSelectableIds = useMemo(
     () => dueRows.map((item) => item.admission_id),
@@ -704,6 +705,7 @@ export default function FeesPage() {
     const shouldClearStudentReference = [
       "student_name",
       "class_name",
+      "parent_name",
       "parent_mobile",
     ].includes(name);
 
@@ -1235,7 +1237,8 @@ export default function FeesPage() {
               onChange={handleEntryChange}
               placeholder="Student name"
               aria-label="Student name"
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              readOnly={hasSelectedCollectionAdmission}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 read-only:bg-slate-100 read-only:text-slate-600"
             />
 
             <select
@@ -1243,7 +1246,8 @@ export default function FeesPage() {
               value={entryForm.class_name}
               onChange={handleEntryChange}
               aria-label="Class"
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              disabled={hasSelectedCollectionAdmission}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 disabled:bg-slate-100 disabled:text-slate-600"
             >
               <option value="">Select class</option>
               {classOptions.map((className) => (
@@ -1254,12 +1258,23 @@ export default function FeesPage() {
             </select>
 
             <input
+              name="parent_name"
+              value={entryForm.parent_name}
+              onChange={handleEntryChange}
+              placeholder="Parent name"
+              aria-label="Parent name"
+              readOnly={hasSelectedCollectionAdmission}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 read-only:bg-slate-100 read-only:text-slate-600"
+            />
+
+            <input
               name="parent_mobile"
               value={entryForm.parent_mobile}
               onChange={handleEntryChange}
               placeholder="Parent mobile number"
               aria-label="Parent mobile number"
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              readOnly={hasSelectedCollectionAdmission}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 read-only:bg-slate-100 read-only:text-slate-600"
             />
 
             <input
@@ -1269,7 +1284,9 @@ export default function FeesPage() {
               onChange={handleEntryChange}
               placeholder="Amount collected"
               aria-label="Amount collected"
-              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              min="1"
+              step="1"
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-slate-900"
             />
 
             <select

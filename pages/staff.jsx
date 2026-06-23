@@ -33,6 +33,8 @@ const emptyForm = {
   notes: "",
 };
 
+const STAFF_TYPE_OPTIONS = ["Teaching", "Non-Teaching", "Admin", "Accountant", "Support"];
+
 function StatusBadge({ status }) {
   const styles = {
     Active: "bg-green-100 text-green-700",
@@ -49,8 +51,16 @@ function StatusBadge({ status }) {
 }
 
 function StaffTypeBadge({ type }) {
+  const styles = {
+    Teaching: "bg-blue-100 text-blue-700",
+    "Non-Teaching": "bg-purple-100 text-purple-700",
+    Admin: "bg-slate-100 text-slate-700",
+    Accountant: "bg-green-100 text-green-700",
+    Support: "bg-amber-100 text-amber-700",
+  };
+
   return (
-    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${type === "Teaching" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles[type] || "bg-slate-100 text-slate-700"}`}>
       {type || "-"}
     </span>
   );
@@ -119,7 +129,7 @@ function StaffModal({ open, mode, form, setForm, onClose, onSubmit, submitting }
           <section>
             <h3 className="mb-3 font-bold text-slate-900">Employment Details</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {select("staff_type", "Staff Type", ["Teaching", "Non-Teaching", "Admin", "Support"])}
+              {select("staff_type", "Staff Type", STAFF_TYPE_OPTIONS)}
               {input("designation", "Designation")}
               {input("department", "Department")}
               {input("subject", "Subject")}
@@ -297,6 +307,7 @@ export default function StaffPage() {
   const totalStaff = staff.length;
   const teachingStaff = staff.filter((item) => item.staff_type === "Teaching").length;
   const nonTeachingStaff = staff.filter((item) => item.staff_type === "Non-Teaching").length;
+  const accountantStaff = staff.filter((item) => item.staff_type === "Accountant").length;
   const activeStaff = staff.filter((item) => item.work_status === "Active").length;
 
   return (
@@ -323,10 +334,11 @@ export default function StaffPage() {
           </div>
         )}
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="rounded-3xl bg-white p-5 shadow-sm"><p className="text-sm font-medium text-slate-500">Total Staff</p><h2 className="mt-3 text-3xl font-bold">{totalStaff}</h2></div>
           <div className="rounded-3xl bg-white p-5 shadow-sm"><p className="text-sm font-medium text-slate-500">Teaching Staff</p><h2 className="mt-3 text-3xl font-bold text-blue-700">{teachingStaff}</h2></div>
           <div className="rounded-3xl bg-white p-5 shadow-sm"><p className="text-sm font-medium text-slate-500">Non-Teaching</p><h2 className="mt-3 text-3xl font-bold text-purple-700">{nonTeachingStaff}</h2></div>
+          <div className="rounded-3xl bg-white p-5 shadow-sm"><p className="text-sm font-medium text-slate-500">Accountants</p><h2 className="mt-3 text-3xl font-bold text-green-700">{accountantStaff}</h2></div>
           <div className="rounded-3xl bg-white p-5 shadow-sm"><p className="text-sm font-medium text-slate-500">Active Staff</p><h2 className="mt-3 text-3xl font-bold text-green-700">{activeStaff}</h2></div>
         </div>
 
@@ -339,6 +351,7 @@ export default function StaffPage() {
               <option value="Teaching">Teaching</option>
               <option value="Non-Teaching">Non-Teaching</option>
               <option value="Admin">Admin</option>
+              <option value="Accountant">Accountant</option>
               <option value="Support">Support</option>
             </select>
 
