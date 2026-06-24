@@ -23,6 +23,7 @@ export default function App({ Component, pageProps }) {
     if (router.pathname === "/expenses") return "Expenses";
     if (router.pathname === "/assets") return "Assets";
     if (router.pathname === "/reports") return "Reports";
+    if (router.pathname === "/approvals") return "Approvals";
     if (router.pathname === "/user-management") return "User Management";
     if (router.pathname === "/school-profile") return "School Profile";
     return "Quantum Admissions";

@@ -17,6 +17,7 @@ const sidebarLinks = [
   { label: "Expenses", href: "/expenses" },
   { label: "Assets", href: "/assets" },
   { label: "Reports", href: "/reports" },
+  { label: "Approvals", href: "/approvals" },
   { label: "User Management", href: "/user-management" },
 ];
 

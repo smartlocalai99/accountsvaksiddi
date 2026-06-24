@@ -46,7 +46,7 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
-export default function ExpensesPage() {
+export default function ExpensesPage({ user }) {
   const [form, setForm] = useState(initialForm);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -155,6 +155,60 @@ export default function ExpensesPage() {
       date: getToday(),
     });
     setError("");
+  }
+
+  async function changeExpense(item) {
+    const amount = window.prompt("Enter corrected expense amount", String(item.amount));
+    if (amount === null) return;
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      window.alert("Enter a valid amount.");
+      return;
+    }
+
+    const proposedData = { ...item, amount: numericAmount };
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(
+      String(user?.role || "").toUpperCase()
+    );
+
+    if (isAdmin) {
+      const response = await fetch(`/api/expenses?id=${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(proposedData),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        window.alert(data.error || "Unable to update expense.");
+        return;
+      }
+
+      window.alert("Expense updated.");
+      await fetchExpenses();
+      return;
+    }
+
+    const reason = window.prompt("Why should this expense be changed?");
+    if (!reason?.trim()) return;
+
+    const response = await fetch("/api/change-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ledger_type: "EXPENSE",
+        record_id: item.id,
+        proposed_data: proposedData,
+        reason,
+      }),
+    });
+    const data = await response.json();
+    window.alert(
+      response.ok && data.success
+        ? "Change request submitted for approval."
+        : data.error || "Unable to submit request."
+    );
   }
 
   return (
@@ -330,6 +384,16 @@ export default function ExpensesPage() {
                       {item.notes}
                     </p>
                   ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => changeExpense(item)}
+                    className="mt-4 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                  >
+                    {String(user?.role || "").toUpperCase() === "ACCOUNTANT"
+                      ? "Request change"
+                      : "Edit expense"}
+                  </button>
 
                 </div>
               ))}

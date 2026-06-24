@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 import { getWhatsAppConfig } from "@/lib/whatsapp";
+import { getUserFromRequest } from "@/lib/auth";
+import { isAdminRole } from "@/lib/changeRequests";
 
 const pool =
   global.feeCollectPool ||
@@ -271,6 +273,32 @@ Vaksiddhi Public School (R), Manvi`;
 }
 
 export default async function handler(req, res) {
+  if (req.method === "PATCH") {
+    const user = await getUserFromRequest(req);
+
+    if (!user || !isAdminRole(user.role)) {
+      return res.status(403).json({ success: false, error: "Admin access required" });
+    }
+
+    const paymentId = Number(req.query.id);
+    const amountPaid = Number(req.body?.amount_paid);
+
+    if (!paymentId || !Number.isFinite(amountPaid) || amountPaid <= 0) {
+      return res.status(400).json({ success: false, error: "Valid payment amount is required" });
+    }
+
+    const result = await pool.query(
+      `UPDATE public.fee_payments SET amount_paid = $1 WHERE id = $2 RETURNING *`,
+      [amountPaid, paymentId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({ success: false, error: "Fee payment not found" });
+    }
+
+    return res.status(200).json({ success: true, payment: result.rows[0] });
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({
       success: false,

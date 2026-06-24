@@ -1,4 +1,6 @@
 import { Pool } from "pg";
+import { getUserFromRequest } from "@/lib/auth";
+import { isAdminRole } from "@/lib/changeRequests";
 
 const pool =
   global.pgPool ||
@@ -42,6 +44,11 @@ function cleanNumber(value) {
 export default async function handler(req, res) {
   try {
     await ensureExpensesTable();
+    const user = await getUserFromRequest(req);
+
+    if (!user) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
 
     if (req.method === "GET") {
       const result = await pool.query(
@@ -63,6 +70,32 @@ export default async function handler(req, res) {
         success: true,
         expenses: result.rows,
       });
+    }
+
+    if (req.method === "PUT") {
+      if (!isAdminRole(user.role)) {
+        return res.status(403).json({ success: false, error: "Admin access required" });
+      }
+
+      const id = Number(req.query.id);
+      const body = req.body || {};
+      const amount = cleanNumber(body.amount);
+
+      if (!id || !body.date || !body.title || !body.category || !amount) {
+        return res.status(400).json({ success: false, error: "Valid expense details are required" });
+      }
+
+      const result = await pool.query(
+        `
+          UPDATE public.expenses
+          SET date = $1, title = $2, category = $3, amount = $4, notes = $5
+          WHERE id = $6
+          RETURNING *
+        `,
+        [body.date, body.title, body.category, amount, cleanValue(body.notes), id]
+      );
+
+      return res.status(200).json({ success: true, expense: result.rows[0] });
     }
 
     if (req.method !== "POST") {

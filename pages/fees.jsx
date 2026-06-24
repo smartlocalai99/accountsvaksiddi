@@ -223,7 +223,7 @@ function waitForImages(documentRef) {
   );
 }
 
-export default function FeesPage() {
+export default function FeesPage({ user }) {
   const today = new Date().toISOString().slice(0, 10);
 
   const [rows, setRows] = useState([]);
@@ -803,6 +803,68 @@ export default function FeesPage() {
     if (options.shouldScroll !== false) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
+
+  async function changeLatestFeeAmount(item) {
+    if (!item.latest_payment_id) {
+      window.alert("No fee payment is available to edit.");
+      return;
+    }
+
+    const amount = window.prompt(
+      "Enter the corrected latest payment amount",
+      String(item.latest_paid_amount || item.paid_amount || "")
+    );
+
+    if (amount === null) return;
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      window.alert("Enter a valid amount.");
+      return;
+    }
+
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(
+      String(user?.role || "").toUpperCase()
+    );
+
+    if (isAdmin) {
+      const response = await fetch(`/api/fees/collect?id=${item.latest_payment_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount_paid: numericAmount }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        window.alert(data.error || "Unable to update fee amount.");
+        return;
+      }
+
+      window.alert("Fee amount updated.");
+      window.location.reload();
+      return;
+    }
+
+    const reason = window.prompt("Why should this fee amount be changed?");
+    if (!reason?.trim()) return;
+
+    const response = await fetch("/api/change-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ledger_type: "FEE",
+        record_id: item.latest_payment_id,
+        proposed_data: { amount_paid: numericAmount },
+        reason,
+      }),
+    });
+    const data = await response.json();
+    window.alert(
+      response.ok && data.success
+        ? "Change request submitted for approval."
+        : data.error || "Unable to submit request."
+    );
   }
 
   // Receipt upload handler removed for Cash payments per request
@@ -1968,6 +2030,17 @@ export default function FeesPage() {
                             <WhatsAppIcon />
                             WhatsApp
                           </button>
+                          {item.latest_payment_id ? (
+                            <button
+                              type="button"
+                              onClick={() => changeLatestFeeAmount(item)}
+                              className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                            >
+                              {String(user?.role || "").toUpperCase() === "ACCOUNTANT"
+                                ? "Request change"
+                                : "Edit amount"}
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

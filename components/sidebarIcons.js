@@ -15,6 +15,7 @@ import {
   FaMoneyBillWave,
   FaExchangeAlt,
   FaUniversity,
+  FaCheckDouble,
 } from "react-icons/fa";
 
 export const sidebarIcons = {
@@ -31,6 +32,7 @@ export const sidebarIcons = {
   Expenses: FaFileInvoiceDollar,
   Assets: FaBoxes,
   Reports: FaChartBar,
+  Approvals: FaCheckDouble,
   "User Management": FaUsersCog,
   Account: FaUserCircle,
 };

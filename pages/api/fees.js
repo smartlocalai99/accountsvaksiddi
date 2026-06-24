@@ -41,6 +41,9 @@ export default async function handler(req, res) {
         COALESCE(MAX(fp.payment_mode), 'Cash') AS payment_mode,
         MAX(fp.payment_date) AS latest_payment_date,
         MAX(fp.receipt_no) AS latest_receipt_no,
+        MAX(fp.id) AS latest_payment_id,
+        (ARRAY_AGG(fp.amount_paid ORDER BY fp.id DESC)
+          FILTER (WHERE fp.id IS NOT NULL))[1] AS latest_paid_amount,
         CASE
           WHEN COALESCE(SUM(fp.amount_paid), 0) = 0 THEN 'Pending'
           WHEN COALESCE(SUM(fp.amount_paid), 0) < COALESCE(a.final_fee, a.fees, 0) THEN 'Partial'
