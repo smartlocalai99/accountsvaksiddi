@@ -8,6 +8,24 @@ const SCHOOL_ADDRESS = "Manvi, Raichur, Karnataka, India";
 const SCHOOL_PHONE = "+91 9449484004";
 const DEFAULT_LOGO = "/logos.png";
 
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return "";
+
+  const [year, month, day] = String(dateOfBirth).split("-").map(Number);
+  const today = new Date();
+
+  if (!year || !month || !day) return "";
+
+  let age = today.getFullYear() - year;
+  const birthdayHasPassed =
+    today.getMonth() + 1 > month ||
+    (today.getMonth() + 1 === month && today.getDate() >= day);
+
+  if (!birthdayHasPassed) age -= 1;
+
+  return age >= 0 ? String(age) : "";
+}
+
 export default function AdmissionForm({ embedded = false }) {
   const [form, setForm] = useState({});
   const [feeRows, setFeeRows] = useState([]);
@@ -121,6 +139,7 @@ export default function AdmissionForm({ embedded = false }) {
     setForm((previous) => ({
       ...previous,
       [name]: value,
+      ...(name === "dob" ? { age: calculateAge(value) } : {}),
       ...(name === "class_applying"
         ? getFeeDefaults(value, previous.student_type)
         : {}),
@@ -168,6 +187,15 @@ export default function AdmissionForm({ embedded = false }) {
         icon: "warning",
         title: "Missing Class",
         text: "Please enter class applying for.",
+      });
+      return false;
+    }
+
+    if (form.aadhar && !/^\d{12}$/.test(form.aadhar)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Aadhaar Number",
+        text: "Aadhaar number must contain exactly 12 digits.",
       });
       return false;
     }
@@ -528,7 +556,7 @@ export default function AdmissionForm({ embedded = false }) {
               <Input
                 label="Age"
                 name="age"
-                onChange={handleChange}
+                readOnly
                 value={form.age || ""}
               />
 
@@ -550,12 +578,14 @@ export default function AdmissionForm({ embedded = false }) {
               </Select>
 
               <Input
-                label="Aadhar (Last 4 Digits)"
+                label="Aadhaar Number"
                 name="aadhar"
                 type="text"
                 inputMode="numeric"
-                maxLength={4}
-                onChange={(e) => handleOnlyDigits("aadhar", e.target.value, 4)}
+                maxLength={12}
+                pattern="\d{12}"
+                placeholder="Enter 12-digit Aadhaar number"
+                onChange={(e) => handleOnlyDigits("aadhar", e.target.value, 12)}
                 value={form.aadhar || ""}
               />
 

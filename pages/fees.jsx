@@ -34,9 +34,8 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-bold ${
-        styles[status] || "bg-slate-100 text-slate-700"
-      }`}
+      className={`rounded-full px-3 py-1 text-xs font-bold ${styles[status] || "bg-slate-100 text-slate-700"
+        }`}
     >
       {status || "Pending"}
     </span>
@@ -229,17 +228,16 @@ export default function FeesPage() {
   const [configSaveError, setConfigSaveError] = useState("");
   const [configSaveSuccess, setConfigSaveSuccess] = useState("");
 
-  useEffect(() => {
-    if (whatsappConfig) {
-      setConfigForm({
-        workerUrl: whatsappConfig.workerUrl || "",
-        workerApiKey: whatsappConfig.workerApiKey || "",
-        railwayApiToken: whatsappConfig.railwayApiToken || "",
-        railwayServiceId: whatsappConfig.railwayServiceId || "",
-        railwayEnvironmentId: whatsappConfig.railwayEnvironmentId || "",
-      });
-    }
-  }, [whatsappConfig]);
+  function applyWhatsappConfig(config) {
+    setWhatsappConfig(config);
+    setConfigForm({
+      workerUrl: config?.workerUrl || "",
+      workerApiKey: config?.workerApiKey || "",
+      railwayApiToken: config?.railwayApiToken || "",
+      railwayServiceId: config?.railwayServiceId || "",
+      railwayEnvironmentId: config?.railwayEnvironmentId || "",
+    });
+  }
 
   const [ledgerSearch, setLedgerSearch] = useState("");
   const [ledgerClass, setLedgerClass] = useState("All");
@@ -329,7 +327,7 @@ export default function FeesPage() {
         }
 
         if (whatsappResponse.ok && whatsappData.success) {
-          setWhatsappConfig(whatsappData.data || null);
+          applyWhatsappConfig(whatsappData.data || null);
         }
       } catch (error) {
         console.error("Fee support settings load error:", error);
@@ -647,7 +645,7 @@ export default function FeesPage() {
           const configRes = await fetch("/api/whatsapp/config");
           const configData = await configRes.json();
           if (configRes.ok && configData.success) {
-            setWhatsappConfig(configData.data || null);
+            applyWhatsappConfig(configData.data || null);
           }
         } catch (e) {
           console.error("Failed to auto-refresh whatsapp status:", e);
@@ -688,7 +686,7 @@ export default function FeesPage() {
       const configRes = await fetch("/api/whatsapp/config");
       const configData = await configRes.json();
       if (configRes.ok && configData.success) {
-        setWhatsappConfig(configData.data || null);
+        applyWhatsappConfig(configData.data || null);
       }
 
       setTimeout(() => setConfigSaveSuccess(""), 4000);
@@ -920,7 +918,7 @@ export default function FeesPage() {
       balance_before: Number(selectedCollectionAdmission?.balance_amount || 0),
       balance_after: Math.max(
         Number(selectedCollectionAdmission?.balance_amount || 0) -
-          Number(entryForm.amount_collected || 0),
+        Number(entryForm.amount_collected || 0),
         0
       ),
       letterhead,
@@ -1077,18 +1075,17 @@ export default function FeesPage() {
                 Track total fees, collections, pending balances, and
                 student-wise fee status.
               </p>
-              
+
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <button
                 type="button"
                 onClick={connectWhatsAppBackend}
-                className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white transition ${
-                  whatsappConfig?.connected
+                className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white transition ${whatsappConfig?.connected
                     ? "bg-green-600 hover:bg-green-700"
                     : "bg-slate-500 hover:bg-slate-600"
-                }`}
+                  }`}
               >
                 <WhatsAppIcon />
                 {whatsappConfig?.connected ? "WhatsApp Connected" : "Connect WhatsApp"}
@@ -1336,45 +1333,45 @@ export default function FeesPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReceiptPreviewOpen(false);
-                      setActiveFeeReceipt(null);
-                      setFeeReceiptSaved(false);
-                    }}
-                    className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
-                  >
-                    {feeReceiptSaved ? "Close" : "Edit"}
-                  </button>
-                  {feeReceiptSaved ? (
                     <button
                       type="button"
-                      onClick={printFeeReceiptOnly}
-                      className="rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
+                      onClick={() => {
+                        setReceiptPreviewOpen(false);
+                        setActiveFeeReceipt(null);
+                        setFeeReceiptSaved(false);
+                      }}
+                      className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700"
                     >
-                      Print Again
+                      {feeReceiptSaved ? "Close" : "Edit"}
                     </button>
-                  ) : (
-                    <>
+                    {feeReceiptSaved ? (
                       <button
                         type="button"
-                        onClick={() => submitFeeEntry()}
-                        disabled={savingFee}
-                        className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
-                      >
-                        {savingFee ? "Saving..." : "Save receipt"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => submitFeeEntry({ shouldPrint: true })}
-                        disabled={savingFee}
+                        onClick={printFeeReceiptOnly}
                         className="rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
                       >
-                        {savingFee ? "Saving..." : "Save & print"}
+                        Print Again
                       </button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => submitFeeEntry()}
+                          disabled={savingFee}
+                          className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
+                        >
+                          {savingFee ? "Saving..." : "Save receipt"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => submitFeeEntry({ shouldPrint: true })}
+                          disabled={savingFee}
+                          className="rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white disabled:opacity-60"
+                        >
+                          {savingFee ? "Saving..." : "Save & print"}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1847,12 +1844,13 @@ export default function FeesPage() {
                   const hasPhone = Boolean(
                     normalizePhoneNumber(item.father_mobile)
                   );
+                  const hasOutstandingBalance =
+                    Number(item.balance_amount || 0) > 0;
 
                   return (
                     <tr
-                      key={`${item.admission_id || "admission"}-${
-                        item.student_id || "student"
-                      }`}
+                      key={`${item.admission_id || "admission"}-${item.student_id || "student"
+                        }`}
                       className="hover:bg-slate-50"
                     >
                       <td className="px-5 py-4">
@@ -1895,13 +1893,15 @@ export default function FeesPage() {
 
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => selectLedgerRowForCollection(item)}
-                            className="inline-flex items-center rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
-                          >
-                            Collect
-                          </button>
+                          {hasOutstandingBalance && (
+                            <button
+                              type="button"
+                              onClick={() => selectLedgerRowForCollection(item)}
+                              className="inline-flex items-center rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
+                            >
+                              Collect
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => openWhatsApp(item)}
@@ -1981,7 +1981,7 @@ function FeeReceiptCopy({ data, isSaved, copyLabel }) {
         <img
           src={logo}
           alt="School Logo"
-          className="receipt-logo h-28 w-[420px] object-contain"
+          className="receipt-logo h-28 w-[600px] object-contain"
         />
 
         <p className="mt-1 text-sm font-black uppercase tracking-wide">

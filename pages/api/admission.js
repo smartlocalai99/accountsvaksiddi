@@ -47,8 +47,14 @@ async function sendWhatsAppAdmission(admission) {
 
   const formatINR = (val) => Number(val || 0).toLocaleString("en-IN");
   const fees = formatINR(admission.fees);
+  const hostelFeeAmount = Number(admission.hostel_fee || 0);
+  const hostelFee = formatINR(hostelFeeAmount);
   const discount = admission.discount || "0";
   const finalFee = formatINR(admission.final_fee);
+  const isHosteller =
+    String(admission.student_type || "").toLowerCase() === "hosteller";
+  const hostelFeeLine =
+    isHosteller && hostelFeeAmount > 0 ? `Hostel Fee: ₹${hostelFee}\n` : "";
 
   const message = `Dear ${parentName}, greetings from Vaksiddhi Public School (R), Manvi.
 
@@ -58,6 +64,7 @@ Admission No: ${admissionNo}
 Class: ${className}
 Total School Fee: ₹${fees}
 Discount: ${discount}%
+${hostelFeeLine}Student Type: ${admission.student_type || "Day Scholar"}
 Final Payable Fee: ₹${finalFee}
 
 Thank you.
@@ -177,6 +184,14 @@ export default async function handler(req, res) {
     }
 
     const body = req.body;
+    const aadhar = String(body.aadhar || "").replace(/\D/g, "");
+
+    if (body.aadhar && aadhar.length !== 12) {
+      return res.status(400).json({
+        success: false,
+        error: "Aadhaar number must contain exactly 12 digits",
+      });
+    }
 
     const fees = cleanNumber(body.fees);
     const hostelFee = cleanNumber(body.hostel_fee);
@@ -286,7 +301,7 @@ export default async function handler(req, res) {
           cleanValue(body.dob),
           cleanValue(body.age),
           cleanValue(body.blood_group),
-          cleanValue(body.aadhar),
+          cleanValue(aadhar),
           cleanValue(body.religion),
           cleanValue(body.sts_no),
           cleanValue(body.pen_number),
