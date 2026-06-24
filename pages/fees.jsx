@@ -9,6 +9,17 @@ const SCHOOL_NAME = "Vaksiddhi Public School (R), Manvi";
 const SCHOOL_ADDRESS = "Manvi, Raichur, Karnataka, India";
 const SCHOOL_PHONE = "+91 9449484004";
 const DEFAULT_LOGO = "/logos.png";
+const FIXED_FEE_COMPONENTS = [
+  { label: "Kreeda Nidhi", amount: 50 },
+  { label: "Kreeda Sulka", amount: 150 },
+  { label: "Medical Fee", amount: 30 },
+  { label: "Library Fee", amount: 50 },
+  { label: "Scouts & Guides Fee", amount: 10 },
+];
+const FIXED_FEE_TOTAL = FIXED_FEE_COMPONENTS.reduce(
+  (total, item) => total + item.amount,
+  0
+);
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -22,6 +33,48 @@ function formatAmountPlain(value) {
   return new Intl.NumberFormat("en-IN", {
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
+}
+
+function formatFeeComponentAmount(value) {
+  return new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
+}
+
+function buildFeeAllocation(totalFee, paidBefore, amountCollected) {
+  let remainingPaidBefore = Math.max(Number(paidBefore) || 0, 0);
+  let remainingCurrentPayment = Math.max(Number(amountCollected) || 0, 0);
+
+  const fixedComponents = FIXED_FEE_COMPONENTS.map((component) => {
+    const paidEarlier = Math.min(remainingPaidBefore, component.amount);
+    remainingPaidBefore -= paidEarlier;
+
+    const outstandingBeforePayment = component.amount - paidEarlier;
+    const paidNow = Math.min(remainingCurrentPayment, outstandingBeforePayment);
+    remainingCurrentPayment -= paidNow;
+
+    return {
+      ...component,
+      paidEarlier,
+      paidNow,
+      paidTotal: paidEarlier + paidNow,
+    };
+  });
+
+  const tuitionFee = Math.max((Number(totalFee) || 0) - FIXED_FEE_TOTAL, 0);
+  const tuitionPaidEarlier = Math.min(remainingPaidBefore, tuitionFee);
+  const tuitionPaidNow = Math.min(
+    remainingCurrentPayment,
+    Math.max(tuitionFee - tuitionPaidEarlier, 0)
+  );
+
+  return {
+    fixedComponents,
+    tuitionFee,
+    tuitionPaidEarlier,
+    tuitionPaidNow,
+  };
 }
 
 function StatusBadge({ status }) {
@@ -1973,6 +2026,11 @@ function FeeReceiptCopy({ data, isSaved, copyLabel }) {
     data?.balance_after !== undefined
       ? Number(data.balance_after || 0)
       : Math.max(Number(data?.balance_before || 0) - amountCollected, 0);
+  const feeAllocation = buildFeeAllocation(
+    totalFee,
+    paidBefore,
+    amountCollected
+  );
 
   return (
     <div className="receipt-copy border-2 border-black bg-white text-[11px] leading-tight text-black">
@@ -2020,6 +2078,35 @@ function FeeReceiptCopy({ data, isSaved, copyLabel }) {
       <FeeReceiptRow label="Payment Mode" value={data?.payment_mode || "-"} />
       {data?.utr ? <FeeReceiptRow label="UTR / Ref No." value={data.utr} /> : null}
 
+      <div className="border-b border-black">
+        <div className="grid grid-cols-[1fr_85px_95px] border-b border-black bg-slate-100 font-black">
+          <div className="receipt-p-1 border-r border-black">Fee Particular</div>
+          <div className="receipt-p-1 border-r border-black text-right">
+            Annual Fee
+          </div>
+          <div className="receipt-p-1 text-center">Payment Status</div>
+        </div>
+
+        <FeeComponentRow
+          label="Tuition Fee"
+          amount={feeAllocation.tuitionFee}
+          paidEarlier={feeAllocation.tuitionPaidEarlier}
+          paidNow={feeAllocation.tuitionPaidNow}
+        />
+
+        {feeAllocation.fixedComponents.map((component) => (
+          <FeeComponentRow key={component.label} {...component} />
+        ))}
+
+        <div className="grid grid-cols-[1fr_85px_95px] font-black">
+          <div className="receipt-p-1 border-r border-black">Total Fee</div>
+          <div className="receipt-p-1 border-r border-black text-right">
+            Rs. {formatFeeComponentAmount(totalFee)}
+          </div>
+          <div className="receipt-p-1 text-center">Included</div>
+        </div>
+      </div>
+
       <div className="receipt-p-1 border-b border-black">
         <p className="font-black">Fee Payment Details:</p>
         <p className="mt-1 text-[10px]">
@@ -2047,6 +2134,29 @@ function FeeReceiptCopy({ data, isSaved, copyLabel }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FeeComponentRow({ label, amount, paidEarlier, paidNow }) {
+  const paidTotal = Number(paidEarlier || 0) + Number(paidNow || 0);
+  let status = "Pending";
+
+  if (Number(paidEarlier || 0) >= Number(amount || 0)) {
+    status = "Paid Earlier";
+  } else if (paidTotal >= Number(amount || 0)) {
+    status = "Paid Now";
+  } else if (paidTotal > 0) {
+    status = `Part Paid Rs. ${formatFeeComponentAmount(paidTotal)}`;
+  }
+
+  return (
+    <div className="grid grid-cols-[1fr_85px_95px] border-b border-black text-[9px]">
+      <div className="receipt-p-1 border-r border-black font-bold">{label}</div>
+      <div className="receipt-p-1 border-r border-black text-right font-bold">
+        Rs. {formatFeeComponentAmount(amount)}
+      </div>
+      <div className="receipt-p-1 text-center font-bold">{status}</div>
     </div>
   );
 }
