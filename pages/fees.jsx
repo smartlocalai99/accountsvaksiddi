@@ -398,7 +398,11 @@ export default function FeesPage() {
     const seen = new Set();
 
     return rows.filter((item) => {
-      if (!item.admission_id || seen.has(item.admission_id)) {
+      if (
+        !item.admission_id ||
+        seen.has(item.admission_id) ||
+        Number(item.balance_amount || 0) <= 0
+      ) {
         return false;
       }
 
