@@ -44,6 +44,17 @@ export default async function handler(req, res) {
         MAX(fp.id) AS latest_payment_id,
         (ARRAY_AGG(fp.amount_paid ORDER BY fp.id DESC)
           FILTER (WHERE fp.id IS NOT NULL))[1] AS latest_paid_amount,
+        (
+          SELECT lcr.id
+          FROM public.ledger_change_requests lcr
+          WHERE lcr.ledger_type = 'FEE'
+            AND lcr.record_id = (
+              ARRAY_AGG(fp.id ORDER BY fp.id DESC)
+                FILTER (WHERE fp.id IS NOT NULL)
+            )[1]
+            AND lcr.status = 'PENDING'
+          LIMIT 1
+        ) AS pending_change_request_id,
         CASE
           WHEN COALESCE(SUM(fp.amount_paid), 0) = 0 THEN 'Pending'
           WHEN COALESCE(SUM(fp.amount_paid), 0) < COALESCE(a.final_fee, a.fees, 0) THEN 'Partial'

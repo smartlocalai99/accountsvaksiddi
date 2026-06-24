@@ -34,10 +34,33 @@ export default async function handler(req, res) {
           SELECT
             cr.*,
             requester.username AS requested_by_name,
-            reviewer.username AS reviewed_by_name
+            reviewer.username AS reviewed_by_name,
+            CASE
+              WHEN cr.ledger_type = 'FEE' THEN jsonb_build_object(
+                'student_name', a.student_name,
+                'class_name', a.class_applying_for,
+                'admission_id', a.id,
+                'parent_name', a.father_name,
+                'parent_mobile', a.father_mobile,
+                'receipt_no', fp.receipt_no,
+                'payment_date', fp.payment_date,
+                'payment_mode', fp.payment_mode
+              )
+              ELSE jsonb_build_object(
+                'expense_title', e.title,
+                'category', e.category,
+                'expense_date', e.date,
+                'notes', e.notes
+              )
+            END AS record_details
           FROM public.ledger_change_requests cr
           JOIN public."Login_accounts" requester ON requester.id = cr.requested_by
           LEFT JOIN public."Login_accounts" reviewer ON reviewer.id = cr.reviewed_by
+          LEFT JOIN public.fee_payments fp
+            ON cr.ledger_type = 'FEE' AND fp.id = cr.record_id
+          LEFT JOIN public.admissions a ON a.id = fp.admission_id
+          LEFT JOIN public.expenses e
+            ON cr.ledger_type = 'EXPENSE' AND e.id = cr.record_id
           ${conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""}
           ORDER BY
             CASE WHEN cr.status = 'PENDING' THEN 0 ELSE 1 END,

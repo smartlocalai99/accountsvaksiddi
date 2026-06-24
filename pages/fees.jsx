@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaFileExcel, FaPlus } from "react-icons/fa";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
 
@@ -807,22 +808,26 @@ export default function FeesPage({ user }) {
 
   async function changeLatestFeeAmount(item) {
     if (!item.latest_payment_id) {
-      window.alert("No fee payment is available to edit.");
+      await Swal.fire("No payment found", "No fee payment is available to edit.", "info");
       return;
     }
 
-    const amount = window.prompt(
-      "Enter the corrected latest payment amount",
-      String(item.latest_paid_amount || item.paid_amount || "")
-    );
+    const amountResult = await Swal.fire({
+      title: "Correct fee amount",
+      text: `${item.student_name} · ${getClassName(item) || "-"}`,
+      input: "number",
+      inputValue: String(item.latest_paid_amount || item.paid_amount || ""),
+      inputAttributes: { min: "1", step: "0.01" },
+      showCancelButton: true,
+      confirmButtonText: "Continue",
+      inputValidator: (value) =>
+        !Number.isFinite(Number(value)) || Number(value) <= 0
+          ? "Enter a valid amount"
+          : undefined,
+    });
 
-    if (amount === null) return;
-
-    const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      window.alert("Enter a valid amount.");
-      return;
-    }
+    if (!amountResult.isConfirmed) return;
+    const numericAmount = Number(amountResult.value);
 
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(
       String(user?.role || "").toUpperCase()
@@ -837,17 +842,25 @@ export default function FeesPage({ user }) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        window.alert(data.error || "Unable to update fee amount.");
+        await Swal.fire("Update failed", data.error || "Unable to update fee amount.", "error");
         return;
       }
 
-      window.alert("Fee amount updated.");
+      await Swal.fire("Updated", "Fee amount updated successfully.", "success");
       window.location.reload();
       return;
     }
 
-    const reason = window.prompt("Why should this fee amount be changed?");
-    if (!reason?.trim()) return;
+    const reasonResult = await Swal.fire({
+      title: "Request fee correction",
+      input: "textarea",
+      inputLabel: "Reason for the change",
+      inputPlaceholder: "Explain why this amount should be corrected...",
+      showCancelButton: true,
+      confirmButtonText: "Submit request",
+      inputValidator: (value) => (!value?.trim() ? "Reason is required" : undefined),
+    });
+    if (!reasonResult.isConfirmed) return;
 
     const response = await fetch("/api/change-requests", {
       method: "POST",
@@ -856,15 +869,18 @@ export default function FeesPage({ user }) {
         ledger_type: "FEE",
         record_id: item.latest_payment_id,
         proposed_data: { amount_paid: numericAmount },
-        reason,
+        reason: reasonResult.value,
       }),
     });
     const data = await response.json();
-    window.alert(
+    await Swal.fire(
+      response.ok && data.success ? "Request submitted" : "Request failed",
       response.ok && data.success
-        ? "Change request submitted for approval."
-        : data.error || "Unable to submit request."
+        ? "The fee correction is pending admin approval."
+        : data.error || "Unable to submit request.",
+      response.ok && data.success ? "success" : "error"
     );
+    if (response.ok && data.success) window.location.reload();
   }
 
   // Receipt upload handler removed for Cash payments per request
@@ -2030,7 +2046,11 @@ export default function FeesPage({ user }) {
                             <WhatsAppIcon />
                             WhatsApp
                           </button>
-                          {item.latest_payment_id ? (
+                          {item.pending_change_request_id ? (
+                            <span className="inline-flex items-center rounded-2xl bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800">
+                              Change pending
+                            </span>
+                          ) : item.latest_payment_id ? (
                             <button
                               type="button"
                               onClick={() => changeLatestFeeAmount(item)}

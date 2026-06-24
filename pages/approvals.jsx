@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { withAuthPage } from "@/lib/withAuthPage";
+import Swal from "sweetalert2";
 
 export const getServerSideProps = withAuthPage({
   path: "/approvals",
@@ -15,14 +16,15 @@ export default function ApprovalsPage() {
   const [requests, setRequests] = useState([]);
   const [status, setStatus] = useState("PENDING");
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
 
   async function loadRequests(selectedStatus = status) {
     setLoading(true);
     const response = await fetch(`/api/change-requests?status=${selectedStatus}`);
     const data = await response.json();
     setRequests(response.ok && data.success ? data.requests || [] : []);
-    setMessage(response.ok ? "" : data.error || "Unable to load approvals");
+    if (!response.ok) {
+      await Swal.fire("Unable to load approvals", data.error || "Please try again.", "error");
+    }
     setLoading(false);
   }
 
@@ -34,26 +36,41 @@ export default function ApprovalsPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   async function reviewRequest(request, action) {
-    const reviewNote =
-      window.prompt(
-        action === "APPROVE"
-          ? "Optional approval note"
-          : "Reason for rejecting this request"
-      ) || "";
+    const isApproval = action === "APPROVE";
+    const result = await Swal.fire({
+      title: isApproval ? "Approve this change?" : "Reject this change?",
+      text: isApproval
+        ? "The approved values will be applied to the ledger immediately."
+        : "The ledger will remain unchanged.",
+      icon: isApproval ? "question" : "warning",
+      input: "textarea",
+      inputLabel: isApproval ? "Approval note (optional)" : "Rejection reason",
+      showCancelButton: true,
+      confirmButtonText: isApproval ? "Approve & apply" : "Reject request",
+      confirmButtonColor: isApproval ? "#16a34a" : "#dc2626",
+      inputValidator: (value) =>
+        !isApproval && !value?.trim() ? "Rejection reason is required" : undefined,
+    });
+
+    if (!result.isConfirmed) return;
 
     const response = await fetch(`/api/change-requests/${request.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, review_note: reviewNote }),
+      body: JSON.stringify({ action, review_note: result.value || "" }),
     });
     const data = await response.json();
 
     if (!response.ok || !data.success) {
-      setMessage(data.error || "Unable to review request");
+      await Swal.fire("Action failed", data.error || "Unable to review request", "error");
       return;
     }
 
-    setMessage(action === "APPROVE" ? "Change approved and applied." : "Change rejected.");
+    await Swal.fire(
+      isApproval ? "Approved" : "Rejected",
+      isApproval ? "The ledger change has been applied." : "The request was rejected.",
+      "success"
+    );
     await loadRequests(status);
   }
 
@@ -84,12 +101,6 @@ export default function ApprovalsPage() {
           </div>
         </section>
 
-        {message ? (
-          <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
-            {message}
-          </div>
-        ) : null}
-
         <section className="space-y-4">
           {requests.map((request) => (
             <article key={request.id} className="rounded-[1.5rem] bg-white p-6 shadow-sm">
@@ -109,6 +120,8 @@ export default function ApprovalsPage() {
                   {request.status}
                 </span>
               </div>
+
+              <RecordDetails request={request} />
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <DataCard title="Current values" data={request.original_data} />
@@ -145,6 +158,43 @@ export default function ApprovalsPage() {
           ) : null}
         </section>
       </div>
+    </div>
+  );
+}
+
+function RecordDetails({ request }) {
+  const details = request.record_details || {};
+
+  if (request.ledger_type === "FEE") {
+    return (
+      <div className="mt-5 grid gap-3 rounded-2xl bg-blue-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Detail label="Student" value={details.student_name} />
+        <Detail label="Class" value={details.class_name} />
+        <Detail label="Admission No." value={details.admission_id} />
+        <Detail label="Receipt No." value={details.receipt_no} />
+        <Detail label="Parent" value={details.parent_name} />
+        <Detail label="Parent Mobile" value={details.parent_mobile} />
+        <Detail label="Payment Date" value={details.payment_date} />
+        <Detail label="Payment Mode" value={details.payment_mode} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 grid gap-3 rounded-2xl bg-orange-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Detail label="Expense" value={details.expense_title} />
+      <Detail label="Category" value={details.category} />
+      <Detail label="Expense Date" value={details.expense_date} />
+      <Detail label="Notes" value={details.notes} />
+    </div>
+  );
+}
+
+function Detail({ label, value }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 font-black text-slate-900">{formatValue(value)}</p>
     </div>
   );
 }

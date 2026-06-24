@@ -60,7 +60,15 @@ export default async function handler(req, res) {
             category,
             amount,
             notes,
-            created_at
+            created_at,
+            (
+              SELECT lcr.id
+              FROM public.ledger_change_requests lcr
+              WHERE lcr.ledger_type = 'EXPENSE'
+                AND lcr.record_id = expenses.id
+                AND lcr.status = 'PENDING'
+              LIMIT 1
+            ) AS pending_change_request_id
           FROM public.expenses
           ORDER BY created_at DESC NULLS LAST, id DESC
         `

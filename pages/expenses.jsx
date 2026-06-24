@@ -8,6 +8,7 @@ import {
 } from "react-icons/fa";
 import PaginationControls from "@/components/PaginationControls";
 import { withAuthPage } from "@/lib/withAuthPage";
+import Swal from "sweetalert2";
 
 export const getServerSideProps = withAuthPage({ path: "/expenses" });
 
@@ -158,14 +159,21 @@ export default function ExpensesPage({ user }) {
   }
 
   async function changeExpense(item) {
-    const amount = window.prompt("Enter corrected expense amount", String(item.amount));
-    if (amount === null) return;
-
-    const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      window.alert("Enter a valid amount.");
-      return;
-    }
+    const amountResult = await Swal.fire({
+      title: "Correct expense amount",
+      text: `${item.title} · ${item.category}`,
+      input: "number",
+      inputValue: String(item.amount),
+      inputAttributes: { min: "1", step: "0.01" },
+      showCancelButton: true,
+      confirmButtonText: "Continue",
+      inputValidator: (value) =>
+        !Number.isFinite(Number(value)) || Number(value) <= 0
+          ? "Enter a valid amount"
+          : undefined,
+    });
+    if (!amountResult.isConfirmed) return;
+    const numericAmount = Number(amountResult.value);
 
     const proposedData = { ...item, amount: numericAmount };
     const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(
@@ -181,17 +189,25 @@ export default function ExpensesPage({ user }) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        window.alert(data.error || "Unable to update expense.");
+        await Swal.fire("Update failed", data.error || "Unable to update expense.", "error");
         return;
       }
 
-      window.alert("Expense updated.");
+      await Swal.fire("Updated", "Expense updated successfully.", "success");
       await fetchExpenses();
       return;
     }
 
-    const reason = window.prompt("Why should this expense be changed?");
-    if (!reason?.trim()) return;
+    const reasonResult = await Swal.fire({
+      title: "Request expense correction",
+      input: "textarea",
+      inputLabel: "Reason for the change",
+      inputPlaceholder: "Explain why this expense should be corrected...",
+      showCancelButton: true,
+      confirmButtonText: "Submit request",
+      inputValidator: (value) => (!value?.trim() ? "Reason is required" : undefined),
+    });
+    if (!reasonResult.isConfirmed) return;
 
     const response = await fetch("/api/change-requests", {
       method: "POST",
@@ -200,15 +216,18 @@ export default function ExpensesPage({ user }) {
         ledger_type: "EXPENSE",
         record_id: item.id,
         proposed_data: proposedData,
-        reason,
+        reason: reasonResult.value,
       }),
     });
     const data = await response.json();
-    window.alert(
+    await Swal.fire(
+      response.ok && data.success ? "Request submitted" : "Request failed",
       response.ok && data.success
-        ? "Change request submitted for approval."
-        : data.error || "Unable to submit request."
+        ? "The expense correction is pending admin approval."
+        : data.error || "Unable to submit request.",
+      response.ok && data.success ? "success" : "error"
     );
+    if (response.ok && data.success) await fetchExpenses();
   }
 
   return (
@@ -385,15 +404,21 @@ export default function ExpensesPage({ user }) {
                     </p>
                   ) : null}
 
-                  <button
-                    type="button"
-                    onClick={() => changeExpense(item)}
-                    className="mt-4 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    {String(user?.role || "").toUpperCase() === "ACCOUNTANT"
-                      ? "Request change"
-                      : "Edit expense"}
-                  </button>
+                  {item.pending_change_request_id ? (
+                    <span className="mt-4 inline-flex rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800">
+                      Change pending
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => changeExpense(item)}
+                      className="mt-4 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                    >
+                      {String(user?.role || "").toUpperCase() === "ACCOUNTANT"
+                        ? "Request change"
+                        : "Edit expense"}
+                    </button>
+                  )}
 
                 </div>
               ))}
