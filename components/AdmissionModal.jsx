@@ -20,6 +20,7 @@ export default function AdmissionModal({ admissionId, onClose }) {
   const [payments, setPayments] = useState([]);
   const [tab, setTab] = useState("details");
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!admissionId) return;
 
@@ -44,6 +45,7 @@ export default function AdmissionModal({ admissionId, onClose }) {
 
     return () => (active = false);
   }, [admissionId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!admissionId) return null;
 

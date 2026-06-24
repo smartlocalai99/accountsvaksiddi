@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 
 export const getServerSideProps = withAuthPage({ path: "/payroll" });
@@ -260,9 +261,11 @@ export default function PayrollPage() {
     }
   }
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchData();
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function openAdd() {
     setSelectedId(null);
@@ -326,8 +329,16 @@ export default function PayrollPage() {
   }
 
   async function markPaid(row) {
-    const ok = window.confirm(`Mark salary paid for ${row.full_name}?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      icon: "question",
+      title: `Mark salary paid for ${row.full_name}?`,
+      showCancelButton: true,
+      confirmButtonText: "Mark paid",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#059669",
+    });
+
+    if (!result.isConfirmed) return;
 
     const res = await fetch(`/api/payroll?id=${row.id}`, {
       method: "PATCH",
@@ -340,7 +351,21 @@ export default function PayrollPage() {
     });
 
     const data = await res.json();
-    if (data.success) fetchData();
+    if (data.success) {
+      await Swal.fire({
+        icon: "success",
+        title: "Salary marked paid",
+        timer: 1600,
+        showConfirmButton: false,
+      });
+      fetchData();
+    } else {
+      await Swal.fire({
+        icon: "error",
+        title: "Update failed",
+        text: data.error || "Unable to mark salary paid",
+      });
+    }
   }
 
   return (

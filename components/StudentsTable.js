@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Swal from "sweetalert2";
 
 export default function StudentsTable({ students, onDeleted }) {
   const [deletingId, setDeletingId] = useState(null);
@@ -6,11 +7,17 @@ export default function StudentsTable({ students, onDeleted }) {
 
   async function deleteStudent(student) {
     const studentName = student.full_name || "this student";
-    const confirmed = window.confirm(
-      `Delete ${studentName}? This will remove the student, admission, parent link, and fee records connected to this admission.`
-    );
+    const result = await Swal.fire({
+      icon: "warning",
+      title: `Delete ${studentName}?`,
+      text: "This will remove the student, admission, parent link, and fee records connected to this admission.",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
 
-    if (!confirmed) {
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -28,8 +35,21 @@ export default function StudentsTable({ students, onDeleted }) {
       }
 
       await onDeleted?.();
+      await Swal.fire({
+        icon: "success",
+        title: "Student deleted",
+        text: `${studentName} was deleted successfully.`,
+        timer: 1800,
+        showConfirmButton: false,
+      });
     } catch (deleteError) {
-      setError(deleteError.message || "Unable to delete student");
+      const message = deleteError.message || "Unable to delete student";
+      setError(message);
+      await Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: message,
+      });
     } finally {
       setDeletingId(null);
     }
