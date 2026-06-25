@@ -11,10 +11,11 @@ const SCHOOL_ADDRESS = "Manvi, Raichur, Karnataka, India";
 const SCHOOL_PHONE = "+91 9449484004";
 const DEFAULT_LOGO = "/logos.png";
 const FIXED_FEE_COMPONENTS = [
-  { label: "Kreeda Nidhi", amount: 50 },
-  { label: "Kreeda Sulka", amount: 150 },
-  { label: "Medical Fee", amount: 30 },
-  { label: "Library Fee", amount: 50 },
+  { label: "Admission Fee", amount: 10 },
+  { label: "Kreeda Nidhi", amount: 5 },
+  { label: "Kreeda Sulka", amount: 15 },
+  { label: "Medical Fee", amount: 3 },
+  { label: "Library Fee", amount: 5 },
   { label: "Scouts & Guides Fee", amount: 10 },
 ];
 const FIXED_FEE_TOTAL = FIXED_FEE_COMPONENTS.reduce(
