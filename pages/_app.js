@@ -15,7 +15,9 @@ export default function App({ Component, pageProps }) {
     if (router.pathname === "/parents") return "Parents";
     if (router.pathname === "/students") return "Students";
     if (router.pathname === "/staff") return "Staff";
-    if (router.pathname === "/payroll") return "Staff";
+    if (router.pathname === "/payroll") return "Payroll";
+    if (router.pathname === "/principal/payroll") return "Principal Payroll";
+    if (router.pathname === "/accountant/paysheet") return "Paysheet";
     if (router.pathname === "/fees") return "Fees";
     if (router.pathname === "/transactions") return "Transactions";
     if (router.pathname === "/bank-cash") return "Cash / Bank";

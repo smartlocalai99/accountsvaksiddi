@@ -12,7 +12,7 @@ const sidebarLinks = [
   { label: "Parents", href: "/parents" },
   { label: "Students", href: "/students" },
   { label: "Staff", href: "/staff" },
-  { label: "Payroll", href: "/payroll" },
+  { label: "Payroll", href: "/principal/payroll" },
   { label: "Fees", href: "/fees" },
   { label: "Expenses", href: "/expenses" },
   { label: "Assets", href: "/assets" },
@@ -30,7 +30,7 @@ const accountantSidebarLinks = [
   { label: "Reconciliation", href: "/reconciliation" },
   { label: "Expenses", href: "/expenses" },
   { label: "Assets", href: "/assets" },
-  { label: "Payroll", href: "/payroll" },
+  { label: "Payroll", href: "/accountant/paysheet" },
   { label: "Reports", href: "/reports" },
 ];
 
