@@ -74,14 +74,27 @@ function StaffModal({ open, mode, form, setForm, onClose, onSubmit, submitting }
   const title = mode === "add" ? "Add Staff" : mode === "edit" ? "Edit Staff" : "Staff Details";
 
   function input(name, label, type = "text") {
+    const isNumber = type === "number";
+
     return (
       <div>
         <label className="mb-1 block text-xs font-bold uppercase text-slate-500">{label}</label>
         <input
           type={type}
+          inputMode={isNumber ? "decimal" : undefined}
+          min={isNumber ? "0" : undefined}
+          step={isNumber ? "0.01" : undefined}
           value={form[name] || ""}
           disabled={isView}
           onChange={(e) => setForm((prev) => ({ ...prev, [name]: e.target.value }))}
+          onWheel={(e) => {
+            if (isNumber) e.currentTarget.blur();
+          }}
+          onKeyDown={(e) => {
+            if (isNumber && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+              e.preventDefault();
+            }
+          }}
           className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900 disabled:bg-slate-50"
         />
       </div>

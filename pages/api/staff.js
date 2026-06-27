@@ -14,6 +14,23 @@ if (!global.pgPool) {
   global.pgPool = pool;
 }
 
+function parseMoney(value) {
+  const normalized = String(value ?? "")
+    .replace(/,/g, "")
+    .trim();
+  const number = Number(normalized);
+  return Number.isFinite(number) && number >= 0 ? Math.round(number * 100) / 100 : 0;
+}
+
+function parseOptionalNumber(value) {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const number = Number(String(value).replace(/,/g, "").trim());
+  return Number.isFinite(number) ? number : null;
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
@@ -167,7 +184,7 @@ export default async function handler(req, res) {
           full_name,
           gender || null,
           date_of_birth || null,
-          age || null,
+          parseOptionalNumber(age),
           blood_group || null,
           mobile || null,
           alternate_mobile || null,
@@ -182,11 +199,11 @@ export default async function handler(req, res) {
           subject || null,
           classes_handling || null,
           qualification || null,
-          experience_years || null,
+          parseOptionalNumber(experience_years),
           joining_date || null,
           employment_type || "Permanent",
           salary_type || "Monthly",
-          monthly_salary || 0,
+          parseMoney(monthly_salary),
           work_status || "Active",
           bank_account_name || null,
           bank_name || null,
@@ -313,7 +330,7 @@ export default async function handler(req, res) {
           full_name,
           gender || null,
           date_of_birth || null,
-          age || null,
+          parseOptionalNumber(age),
           blood_group || null,
           mobile || null,
           alternate_mobile || null,
@@ -328,11 +345,11 @@ export default async function handler(req, res) {
           subject || null,
           classes_handling || null,
           qualification || null,
-          experience_years || null,
+          parseOptionalNumber(experience_years),
           joining_date || null,
           employment_type || "Permanent",
           salary_type || "Monthly",
-          monthly_salary || 0,
+          parseMoney(monthly_salary),
           work_status || "Active",
           bank_account_name || null,
           bank_name || null,
