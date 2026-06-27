@@ -252,7 +252,7 @@ export default function PayrollRunView({ mode = "principal" }) {
       await Swal.fire({
         icon: "success",
         title: "Payroll generated",
-        text: "Bank file downloaded. Upload it manually in SBI Corporate/YONO Business.",
+        text: "Bank file downloaded. Upload it in SBI Corporate/YONO Business.",
         timer: 2200,
         showConfirmButton: false,
       });
@@ -330,7 +330,7 @@ export default function PayrollRunView({ mode = "principal" }) {
               <div>
                 <h2 className="text-lg font-black text-slate-900">Upload Salary File to SBI</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                  After downloading the bank file, login to SBI Corporate/YONO Business and upload this file manually.
+                  After downloading the bank file, login to SBI Corporate/YONO Business and upload this file.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
