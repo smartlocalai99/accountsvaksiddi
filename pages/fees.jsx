@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaFileExcel, FaPlus } from "react-icons/fa";
+import { FaFileExcel, FaPlus, FaPrint } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { withAuthPage } from "@/lib/withAuthPage";
 import { downloadExcel } from "@/lib/exportToExcel";
@@ -805,6 +805,44 @@ export default function FeesPage({ user }) {
     if (options.shouldScroll !== false) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  }
+
+  async function openLatestFeeReceipt(item) {
+    if (!item.latest_payment_id || !item.latest_receipt_no) {
+      await Swal.fire(
+        "No receipt found",
+        "No saved fee receipt is available for this student yet.",
+        "info"
+      );
+      return;
+    }
+
+    const amountCollected = Number(item.latest_paid_amount || 0);
+    const paidAfter = Number(item.paid_amount || 0);
+    const paidBefore = Math.max(paidAfter - amountCollected, 0);
+
+    setEntryError("");
+    setActiveFeeReceipt({
+      admission_id: item.admission_id || "",
+      student_id: item.student_id || "",
+      date: item.latest_payment_date || today,
+      student_name: item.student_name || "",
+      class_name: getClassName(item) || "",
+      parent_name: item.father_name || "",
+      parent_mobile: item.father_mobile || "",
+      amount_collected: amountCollected,
+      payment_mode: getPaymentMode(item) || "Cash",
+      utr: item.latest_utr || item.utr || "",
+      receipt_no: item.latest_receipt_no,
+      total_fee: Number(item.total_fee || 0),
+      paid_before: paidBefore,
+      paid_after: paidAfter,
+      balance_before: paidBefore + Number(item.balance_amount || 0),
+      balance_after: Number(item.balance_amount || 0),
+      letterhead,
+    });
+    setFeeReceiptSaved(true);
+    setReceiptPreviewOpen(true);
   }
 
   async function changeLatestFeeAmount(item) {
@@ -2047,6 +2085,16 @@ export default function FeesPage({ user }) {
                             <WhatsAppIcon />
                             WhatsApp
                           </button>
+                          {item.latest_payment_id ? (
+                            <button
+                              type="button"
+                              onClick={() => openLatestFeeReceipt(item)}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                            >
+                              <FaPrint />
+                              Print
+                            </button>
+                          ) : null}
                           {item.pending_change_request_id ? (
                             <span className="inline-flex items-center rounded-2xl bg-amber-100 px-4 py-2 text-sm font-bold text-amber-800">
                               Change pending
