@@ -23,8 +23,15 @@ export default async function handler(req, res) {
           staff_code,
           full_name,
           gender,
+          date_of_birth,
+          age,
+          blood_group,
           mobile,
+          alternate_mobile,
           email,
+          address,
+          aadhar_last4,
+          pan_number,
           staff_type,
           designation,
           department,
@@ -38,6 +45,17 @@ export default async function handler(req, res) {
           monthly_salary,
           work_status,
           photo_url,
+          bank_account_name,
+          bank_name,
+          bank_branch,
+          bank_account_number,
+          ifsc_code,
+          upi_id,
+          has_login_access,
+          login_account_id,
+          emergency_contact_name,
+          emergency_contact_mobile,
+          notes,
           created_at
         FROM public.staff
         ORDER BY id DESC
@@ -185,6 +203,160 @@ export default async function handler(req, res) {
       );
 
       return res.status(201).json({
+        success: true,
+        staff: result.rows[0],
+      });
+    }
+
+    if (req.method === "PUT") {
+      const { id } = req.query;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: "Staff id is required",
+        });
+      }
+
+      const {
+        staff_code,
+        full_name,
+        gender,
+        date_of_birth,
+        age,
+        blood_group,
+        mobile,
+        alternate_mobile,
+        email,
+        address,
+        aadhar_last4,
+        pan_number,
+        photo_url,
+        staff_type,
+        designation,
+        department,
+        subject,
+        classes_handling,
+        qualification,
+        experience_years,
+        joining_date,
+        employment_type,
+        salary_type,
+        monthly_salary,
+        work_status,
+        bank_account_name,
+        bank_name,
+        bank_branch,
+        bank_account_number,
+        ifsc_code,
+        upi_id,
+        has_login_access,
+        login_account_id,
+        emergency_contact_name,
+        emergency_contact_mobile,
+        notes,
+      } = req.body;
+
+      if (!full_name) {
+        return res.status(400).json({
+          success: false,
+          error: "Staff full name is required",
+        });
+      }
+
+      const result = await pool.query(
+        `
+        UPDATE public.staff
+        SET
+          staff_code = $1,
+          full_name = $2,
+          gender = $3,
+          date_of_birth = $4,
+          age = $5,
+          blood_group = $6,
+          mobile = $7,
+          alternate_mobile = $8,
+          email = $9,
+          address = $10,
+          aadhar_last4 = $11,
+          pan_number = $12,
+          photo_url = $13,
+          staff_type = $14,
+          designation = $15,
+          department = $16,
+          subject = $17,
+          classes_handling = $18,
+          qualification = $19,
+          experience_years = $20,
+          joining_date = $21,
+          employment_type = $22,
+          salary_type = $23,
+          monthly_salary = $24,
+          work_status = $25,
+          bank_account_name = $26,
+          bank_name = $27,
+          bank_branch = $28,
+          bank_account_number = $29,
+          ifsc_code = $30,
+          upi_id = $31,
+          has_login_access = $32,
+          login_account_id = $33,
+          emergency_contact_name = $34,
+          emergency_contact_mobile = $35,
+          notes = $36,
+          updated_at = NOW()
+        WHERE id = $37
+        RETURNING *
+        `,
+        [
+          staff_code || null,
+          full_name,
+          gender || null,
+          date_of_birth || null,
+          age || null,
+          blood_group || null,
+          mobile || null,
+          alternate_mobile || null,
+          email || null,
+          address || null,
+          aadhar_last4 || null,
+          pan_number || null,
+          photo_url || null,
+          staff_type || "Teaching",
+          designation || null,
+          department || null,
+          subject || null,
+          classes_handling || null,
+          qualification || null,
+          experience_years || null,
+          joining_date || null,
+          employment_type || "Permanent",
+          salary_type || "Monthly",
+          monthly_salary || 0,
+          work_status || "Active",
+          bank_account_name || null,
+          bank_name || null,
+          bank_branch || null,
+          bank_account_number || null,
+          ifsc_code || null,
+          upi_id || null,
+          has_login_access || false,
+          login_account_id || null,
+          emergency_contact_name || null,
+          emergency_contact_mobile || null,
+          notes || null,
+          Number(id),
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Staff not found",
+        });
+      }
+
+      return res.status(200).json({
         success: true,
         staff: result.rows[0],
       });
