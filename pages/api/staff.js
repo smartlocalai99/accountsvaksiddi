@@ -389,15 +389,11 @@ export default async function handler(req, res) {
         });
       }
 
-      // Better than hard delete: make staff inactive
       const result = await pool.query(
         `
-        UPDATE public.staff
-        SET 
-          work_status = 'Inactive',
-          updated_at = NOW()
+        DELETE FROM public.staff
         WHERE id = $1
-        RETURNING id, full_name, work_status
+        RETURNING id, full_name
         `,
         [Number(id)]
       );

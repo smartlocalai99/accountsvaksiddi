@@ -306,9 +306,10 @@ export default function StaffPage() {
   async function deleteStaff(item) {
     const result = await Swal.fire({
       icon: "warning",
-      title: `Deactivate ${item.full_name}?`,
+      title: `Delete ${item.full_name}?`,
+      text: "This will permanently remove this staff record.",
       showCancelButton: true,
-      confirmButtonText: "Deactivate",
+      confirmButtonText: "Delete",
       cancelButtonText: "Cancel",
       confirmButtonColor: "#dc2626",
     });
@@ -319,10 +320,10 @@ export default function StaffPage() {
       const response = await fetch(`/api/staff?id=${item.id}`, { method: "DELETE" });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || "Failed to delete staff");
-      setMessage("Staff deactivated successfully");
+      setMessage("Staff deleted successfully");
       await Swal.fire({
         icon: "success",
-        title: "Staff deactivated",
+        title: "Staff deleted",
         timer: 1600,
         showConfirmButton: false,
       });
@@ -331,7 +332,7 @@ export default function StaffPage() {
       setMessage(error.message);
       await Swal.fire({
         icon: "error",
-        title: "Deactivate failed",
+        title: "Delete failed",
         text: error.message,
       });
     }
