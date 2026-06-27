@@ -35,10 +35,6 @@ function money(value) {
   }).format(Number(value) || 0);
 }
 
-function daysInMonth(month, year) {
-  return new Date(Number(year), Number(month), 0).getDate();
-}
-
 function roundMoney(value) {
   return Math.round(((Number(value) || 0) + Number.EPSILON) * 100) / 100;
 }
@@ -48,12 +44,10 @@ function calculatePreview(row) {
   const totalWorkingDays = Number(row.totalWorkingDays || 0);
   const unpaidLeaveDays = Number(row.unpaidLeaveDays || 0);
   const advanceDeduction = Number(row.advanceDeduction || 0);
-  const otherDeduction = Number(row.otherDeduction || 0);
-  const bonusAllowance = Number(row.bonusAllowance || 0);
   const perDaySalary = totalWorkingDays > 0 ? monthlySalary / totalWorkingDays : 0;
   const leaveDeduction = roundMoney(perDaySalary * unpaidLeaveDays);
-  const totalDeduction = roundMoney(leaveDeduction + advanceDeduction + otherDeduction);
-  const netSalary = roundMoney(monthlySalary - totalDeduction + bonusAllowance);
+  const totalDeduction = roundMoney(leaveDeduction + advanceDeduction);
+  const netSalary = roundMoney(monthlySalary - totalDeduction);
   return { leaveDeduction, totalDeduction, netSalary };
 }
 
@@ -158,7 +152,14 @@ export default function PayrollRunView({ mode = "principal" }) {
     setItems((current) =>
       current.map((item, itemIndex) => {
         if (itemIndex !== index) return item;
-        const updated = { ...item, [field]: value };
+        const updated = {
+          ...item,
+          [field]: value,
+          paidLeaveDays: 0,
+          otherDeduction: 0,
+          bonusAllowance: 0,
+          remarks: "",
+        };
         const preview = calculatePreview(updated);
         return {
           ...updated,
@@ -214,13 +215,26 @@ export default function PayrollRunView({ mode = "principal" }) {
       if (!result.isConfirmed) return;
 
       setGenerating(true);
+      const generationItems = items.map((item) => {
+        const preview = calculatePreview(item);
+        return {
+          ...item,
+          paidLeaveDays: 0,
+          otherDeduction: 0,
+          bonusAllowance: 0,
+          remarks: "",
+          leaveDeduction: preview.leaveDeduction,
+          totalDeduction: preview.totalDeduction,
+          netSalary: preview.netSalary,
+        };
+      });
       const response = await fetch("/api/payroll-runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           month,
           year,
-          items,
+          items: generationItems,
           regenerate: exists,
         }),
       });
@@ -234,7 +248,7 @@ export default function PayrollRunView({ mode = "principal" }) {
       setMessage("Payroll generated and bank file downloaded. Login to SBI Corporate/YONO Business and upload this file.");
       setExists(true);
       setRun(data.run);
-      setItems(data.run?.items || items);
+      setItems(data.run?.items || generationItems);
       await Swal.fire({
         icon: "success",
         title: "Payroll generated",
@@ -346,25 +360,19 @@ export default function PayrollRunView({ mode = "principal" }) {
             <h2 className="text-lg font-black text-slate-900">Payroll Table</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-[1500px]">
+            <table className="min-w-[1100px]">
               <thead className="bg-primary">
                 <tr>
                   {[
                     "Staff Code",
                     "Staff Name",
                     "Designation",
-                    "Department",
                     "Monthly Salary",
                     "Total Working Days",
                     "Present Days",
-                    "Paid Leave Days",
-                    "Unpaid Leave Days",
+                    "Leave Days",
                     "Advance Deduction",
-                    "Other Deduction",
-                    "Bonus / Allowance",
                     "Net Salary",
-                    "Bank Account Status",
-                    "Remarks",
                   ].map((heading) => (
                     <th key={heading} className="px-4 py-4 text-left text-xs font-black uppercase tracking-wide text-white">
                       {heading}
@@ -380,28 +388,12 @@ export default function PayrollRunView({ mode = "principal" }) {
                       <td className="px-4 py-3 text-sm font-bold text-slate-700">{row.staffCode || "-"}</td>
                       <td className="px-4 py-3 text-sm font-bold text-slate-900">{row.staffName || "-"}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">{row.designation || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{row.department || "-"}</td>
                       <td className="px-4 py-3 text-sm font-bold text-slate-900">{money(row.monthlySalary)}</td>
                       <td className="px-4 py-3">{inputCell(index, row, "totalWorkingDays")}</td>
                       <td className="px-4 py-3">{inputCell(index, row, "presentDays")}</td>
-                      <td className="px-4 py-3">{inputCell(index, row, "paidLeaveDays")}</td>
                       <td className="px-4 py-3">{inputCell(index, row, "unpaidLeaveDays")}</td>
                       <td className="px-4 py-3">{inputCell(index, row, "advanceDeduction")}</td>
-                      <td className="px-4 py-3">{inputCell(index, row, "otherDeduction")}</td>
-                      <td className="px-4 py-3">{inputCell(index, row, "bonusAllowance")}</td>
                       <td className="px-4 py-3 text-sm font-black text-green-700">{money(preview.netSalary)}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            row.bankStatus === "Bank Details Missing"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {row.bankStatus || "Ready"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{inputCell(index, row, "remarks", "text")}</td>
                     </tr>
                   );
                 })}
