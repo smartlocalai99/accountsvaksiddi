@@ -15,8 +15,6 @@ export default async function handler(req, res) {
             configured: false,
             workerUrl: "",
             connectUrl: "",
-            connected: false,
-            connectedPhone: null,
             workerApiKey: "",
             railwayApiToken: "",
             railwayServiceId: "",
@@ -25,35 +23,12 @@ export default async function handler(req, res) {
         });
       }
 
-      // Try to fetch live status from the worker
-      let connected = false;
-      let connectedPhone = null;
-
-      try {
-        const statusRes = await fetch(`${workerUrl}/status`, {
-          headers: { "x-api-key": workerApiKey },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          connected = statusData?.whatsapp?.connected === true;
-          // Extract just the phone number part (before the colon)
-          const rawId = statusData?.whatsapp?.user?.id || "";
-          connectedPhone = rawId ? rawId.split(":")[0].replace(/\D/g, "") : null;
-        }
-      } catch (err) {
-        console.error("Failed to connect to WhatsApp worker status endpoint:", err.message);
-        // Worker unreachable; return config without live status
-      }
-
       return res.status(200).json({
         success: true,
         data: {
           configured: true,
           workerUrl,
           connectUrl,
-          connected,
-          connectedPhone,
           workerApiKey,
           railwayApiToken,
           railwayServiceId,

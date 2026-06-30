@@ -15,6 +15,7 @@
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "formidable": "^3.5.4",
+    "framer-motion": "^12.42.0",
     "js-md4": "^0.3.2",
     "jsonwebtoken": "^9.0.3",
     "next": "16.2.4",

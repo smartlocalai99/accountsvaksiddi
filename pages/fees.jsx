@@ -267,6 +267,7 @@ export default function FeesPage({ user }) {
   const [schoolSettings, setSchoolSettings] = useState(null);
   const [whatsappConfig, setWhatsappConfig] = useState(null);
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappConfigLoading, setWhatsappConfigLoading] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [redeployError, setRedeployError] = useState("");
   const [redeploySuccess, setRedeploySuccess] = useState("");
@@ -367,13 +368,9 @@ export default function FeesPage({ user }) {
 
     async function loadSupportSettings() {
       try {
-        const [settingsResponse, whatsappResponse] = await Promise.all([
-          fetch("/api/school-settings"),
-          fetch("/api/whatsapp/config"),
-        ]);
+        const settingsResponse = await fetch("/api/school-settings");
 
         const settingsData = await settingsResponse.json();
-        const whatsappData = await whatsappResponse.json();
 
         if (!active) return;
 
@@ -381,9 +378,6 @@ export default function FeesPage({ user }) {
           setSchoolSettings(settingsData.data || null);
         }
 
-        if (whatsappResponse.ok && whatsappData.success) {
-          applyWhatsappConfig(whatsappData.data || null);
-        }
       } catch (error) {
         console.error("Fee support settings load error:", error);
       }
@@ -656,18 +650,28 @@ export default function FeesPage({ user }) {
     });
   }
 
-  function connectWhatsAppBackend() {
-    if (!whatsappConfig?.connectUrl) {
-      setEntryError(
-        "WhatsApp backend is not configured. Add WHATSAPP_WORKER_URL and WHATSAPP_WORKER_API_KEY in .env."
-      );
-      return;
-    }
-
+  async function connectWhatsAppBackend() {
     setRedeployError("");
     setRedeploySuccess("");
     setIsRestarting(false);
-    setWhatsappModalOpen(true);
+    setWhatsappConfigLoading(true);
+
+    try {
+      const response = await fetch("/api/whatsapp/config");
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setEntryError(data.error || "Failed to load WhatsApp configuration.");
+        return;
+      }
+
+      applyWhatsappConfig(data.data || null);
+      setWhatsappModalOpen(true);
+    } catch (error) {
+      setEntryError(error.message || "Failed to load WhatsApp configuration.");
+    } finally {
+      setWhatsappConfigLoading(false);
+    }
   }
 
   async function handleForceDisconnect() {
@@ -698,19 +702,6 @@ export default function FeesPage({ user }) {
         "Service restart triggered successfully! Please wait ~15-20 seconds for the worker to reboot, then click 'Open QR Code' to scan your new number."
       );
 
-      // Refresh status after 15 seconds
-      setTimeout(async () => {
-        try {
-          const configRes = await fetch("/api/whatsapp/config");
-          const configData = await configRes.json();
-          if (configRes.ok && configData.success) {
-            applyWhatsappConfig(configData.data || null);
-          }
-        } catch (e) {
-          console.error("Failed to auto-refresh whatsapp status:", e);
-        }
-      }, 15000);
-
     } catch (error) {
       console.error("Force disconnect error:", error);
       setRedeployError(error.message || "Failed to restart worker. Please try again or restart manually on Railway.");
@@ -739,14 +730,14 @@ export default function FeesPage({ user }) {
         return;
       }
 
-      setConfigSaveSuccess("Configuration saved successfully! Refreshing status...");
-
-      // Instantly reload configuration status from server
-      const configRes = await fetch("/api/whatsapp/config");
-      const configData = await configRes.json();
-      if (configRes.ok && configData.success) {
-        applyWhatsappConfig(configData.data || null);
-      }
+      setConfigSaveSuccess("Configuration saved successfully!");
+      applyWhatsappConfig({
+        ...configForm,
+        configured: Boolean(configForm.workerUrl && configForm.workerApiKey),
+        connectUrl: configForm.workerUrl
+          ? `${configForm.workerUrl.replace(/\/$/, "")}/qr`
+          : "",
+      });
 
       setTimeout(() => setConfigSaveSuccess(""), 4000);
     } catch (error) {
@@ -1256,13 +1247,11 @@ export default function FeesPage({ user }) {
               <button
                 type="button"
                 onClick={connectWhatsAppBackend}
-                className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white transition ${whatsappConfig?.connected
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-slate-500 hover:bg-slate-600"
-                  }`}
+                disabled={whatsappConfigLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-600 disabled:cursor-wait disabled:opacity-60"
               >
                 <WhatsAppIcon />
-                {whatsappConfig?.connected ? "WhatsApp Connected" : "Connect WhatsApp"}
+                {whatsappConfigLoading ? "Loading WhatsApp..." : "Connect WhatsApp"}
               </button>
 
               <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
@@ -1570,7 +1559,7 @@ export default function FeesPage({ user }) {
                   </div>
                   <div>
                     <h2 className="text-lg font-black text-slate-900">WhatsApp Connection</h2>
-                    <p className="text-xs font-medium text-slate-500">Manage your connected WhatsApp account</p>
+                    <p className="text-xs font-medium text-slate-500">Open the QR code or update the worker settings</p>
                   </div>
                   <button
                     type="button"
@@ -1581,24 +1570,9 @@ export default function FeesPage({ user }) {
                   </button>
                 </div>
 
-                {/* Status */}
                 <div className="px-6 py-5">
-                  <div className={`flex items-center gap-3 rounded-2xl p-4 ${whatsappConfig?.connected ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
-                    <span className={`h-3 w-3 rounded-full shrink-0 ${whatsappConfig?.connected ? "bg-green-500" : "bg-red-500"}`} />
-                    <div>
-                      <p className={`text-sm font-black ${whatsappConfig?.connected ? "text-green-800" : "text-red-800"}`}>
-                        {whatsappConfig?.connected ? "Connected" : "Not Connected"}
-                      </p>
-                      {whatsappConfig?.connectedPhone && (
-                        <p className="mt-0.5 text-xs font-semibold text-green-700">
-                          +{whatsappConfig.connectedPhone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Change WhatsApp instructions */}
-                  <div className="mt-5">
+                  <div>
                     <p className="text-sm font-black text-slate-900">To change WhatsApp number:</p>
                     <ol className="mt-3 space-y-3">
                       <li className="flex items-start gap-3">
@@ -1772,10 +1746,11 @@ export default function FeesPage({ user }) {
                   </button>
                   <button
                     type="button"
+                    disabled={!whatsappConfig?.connectUrl}
                     onClick={() => {
                       window.open(whatsappConfig?.connectUrl, "_blank", "noopener,noreferrer");
                     }}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-700"
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <WhatsAppIcon />
                     Open QR Code
